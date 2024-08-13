@@ -4,7 +4,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 from PIL import Image
 
-class LIDCBinaryDataset(Dataset):
+class LIDCDataset(Dataset):
     def __init__(self, labels_file, transform=None, train=True, auto_split=False, zero_indexed=True, chosen_chars=None, push=False):
         all_labels = pd.read_csv(labels_file)
         self.num_characteristics = len(all_labels.columns) - 1

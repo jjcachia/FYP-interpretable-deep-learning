@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch
 from sklearn.metrics import balanced_accuracy_score
 
 def _adjust_weights(balanced_accuracies, exponent=5, target_sum=2):
@@ -22,7 +23,6 @@ def _adjust_weights(balanced_accuracies, exponent=5, target_sum=2):
     return scaled_weights
 
 def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None):
-    """Perform training or testing steps on given model and data loader."""
     model.to(device)
     if is_train:
         model.train()
