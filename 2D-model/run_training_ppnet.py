@@ -232,7 +232,8 @@ def main():
         # Testing step
         test_metrics = tnt.test_ppnet(data_loader=test_dataloader,
                                         model=model,
-                                        device=device)
+                                        device=device,
+                                        coefs=coefs)
         all_test_metrics.append(test_metrics)  # Append testing metrics for the epoch
         
         if epoch >= push_start and epoch in push_epochs:
@@ -247,7 +248,8 @@ def main():
                         )
             test_metrics = tnt.test_ppnet(data_loader=test_dataloader,
                                         model=model,
-                                        device=device)
+                                        device=device,
+                                        coefs=coefs)
             all_test_metrics.append(test_metrics)
             
             if prototype_activation_function != 'linear':
@@ -260,7 +262,8 @@ def main():
                                         coefs=coefs)
                     _ = tnt.test_ppnet(data_loader=test_dataloader,
                                         model=model,
-                                        device=device)
+                                        device=device,
+                                        coefs=coefs)
             
         
         # Save the model if the test loss has decreased
