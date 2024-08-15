@@ -146,7 +146,8 @@ def main():
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
-    last_layer_optimizer_specs = [{'params': model.last_layer.parameters(), 'lr': last_layer_optimizer_lr}]
+    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
+                                  {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
     last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
     
     
