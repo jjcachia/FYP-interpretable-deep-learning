@@ -139,7 +139,8 @@ def main():
     construct_Model = MODEL_DICT[args.model]
     
     # Create the model instance
-    model = construct_Model(base_architecture=args.backbone, weights=args.weights)
+    # model = construct_Model(base_architecture=args.backbone, weights=args.weights)
+    model = construct_Model(base_architecture='denseFPN_121', weights='DEFAULT', img_size=100, prototype_shape=(50*5*2, 224, 1, 1), num_characteristics=5, prototype_activation_function='log', add_on_layers_type='bottleneck')
     
     # Print total number of parameters
     total_params = sum(p.numel() for p in model.parameters())
