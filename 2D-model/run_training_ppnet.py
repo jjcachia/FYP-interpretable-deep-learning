@@ -78,6 +78,8 @@ def main():
     # labels_file = './dataset/Meta/meta_info_old.csv'
     labels_file = os.path.join(script_dir, 'dataset', 'Meta', 'meta_info_old.csv')
 
+    mean = (0.5, 0.5, 0.5)
+    std = (0.5, 0.5, 0.5)
     preprocess = transforms.Compose([
         transforms.Grayscale(num_output_channels=3), 
         transforms.Resize(256),  # First resize to larger dimensions
@@ -87,15 +89,35 @@ def main():
     ])
 
     # train set
-    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, transform=preprocess, train=True)
+    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
+                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
+                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
+                                                                        transforms.ToTensor(), 
+                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+                                                                        transforms.Normalize(mean, std)
+                                                                        ]),
+                                                            train=True)
     train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
     # push set
-    LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, transform=preprocess, train=True, push=True)
+    LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
+                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
+                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
+                                                                        transforms.ToTensor(), 
+                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+                                                                        transforms.Normalize(mean, std)
+                                                                        ]), train=True, push=True)
     push_dataloader = torch.utils.data.DataLoader(LIDC_pushset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     
     # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, transform=preprocess, train=False)
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
+                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
+                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
+                                                                        transforms.ToTensor(), 
+                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+                                                                        transforms.Normalize(mean, std)
+                                                                        ]), 
+                                                            train=False)
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
     batch_images = next(iter(train_dataloader))
