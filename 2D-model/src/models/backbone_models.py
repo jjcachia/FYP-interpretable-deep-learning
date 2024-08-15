@@ -3,30 +3,123 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 
+############################################################################################################################################################################
+############################################################################ Base CNN Networks #############################################################################
+############################################################################################################################################################################
+
+class denseNet121(nn.Module):
+    """ DenseNet121-based Feature Extractor for feature extraction.
+        Total number of parameters:  6953856 (6.95 million)
+        Returns a feature map of size 1024x3x3. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        """ 
+        Initializes the denseNet121 class. 
+            
+        Args:
+            weights (str): The weights to use for the DenseNet121 features. Default is 'DEFAULT'.
+            common_channel_size (int): The size of the common channel. Default is None.
+        """
+        super(denseNet121, self).__init__()
+        densenet = models.densenet121(weights=weights)
+        self.features = densenet.features  
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
+        final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
+        return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
+    
+    def conv_info(self):
+        """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
+        conv_layers = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)]
+        kernel_sizes, strides, paddings = [], [], []
+        for conv in conv_layers:
+            kernel_sizes.append(conv.kernel_size[0])
+            strides.append(conv.stride[0])
+            paddings.append(conv.padding[0])
+        return kernel_sizes, strides, paddings
+
+class denseNet169(nn.Module):
+    """ DenseNet169-based Feature Extractor for feature extraction.
+        Total number of parameters:  12688648 (12.69 million) 
+        Returns a feature map of size 1664x3x3. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        """
+        Initializes the denseNet169 class.
+        
+        Args:
+            weights (str): The weights to use for the DenseNet169 features. Default is 'DEFAULT'.
+            common_channel_size (int): The size of the common channel. Default is None.
+        """
+        super(denseNet169, self).__init__()
+        densenet = models.densenet169(weights=weights)
+        self.features = densenet.features
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
+        final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
+        return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
+
+
+class denseNet201(nn.Module):
+    """ DenseNet201-based Feature Extractor for feature extraction.
+        Total number of parameters:  18092928 (18.09 million) 
+        Returns a feature map of size 1920x3x3. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        """ 
+        Initializes the denseNet201 class.
+        
+        Args:
+            weights (str): The weights to use for the DenseNet201 features. Default is 'DEFAULT'.
+            common_channel_size (int): The size of the common channel. Default is None.
+        """
+        super(denseNet201, self).__init__()
+        densenet = models.densenet201(weights=weights)
+        self.features = densenet.features
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
+        final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
+        return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
+
+
+############################################################################################################################################################################
+######################################################################### Feature Pyramid Networks ##########################################################################
+############################################################################################################################################################################
 
 class denseFPN_121(nn.Module):
     """ DenseNet121-based Feature Pyramid Network (FPN) for feature extraction. 
         Total number of parameters:  8232320 (8.23 million) 
         Returns a feature map of size 256x12x12. """ 
-    def __init__(self, weights='DEFAULT', common_channel_size=256, output_channel_size=256, output_feature_size=12):
+    def __init__(self, weights='DEFAULT', common_channel_size=256):
         """
         Initializes the denseFPN_121 class.
 
         Args:
-            weights (str): The weights to use for the denseFPN_121 Small features. Default is 'DEFAULT'.
-            common_channel_size (int): The size of the common channel. Default is 256.
-            output_channel_size (int): The size of the output channel. Default is 256.
-            output_feature_size (int): The size of the output feature. Default is 12.
+            weights (str): The weights to use for the denseFPN_121 features. Default is 'DEFAULT'.
+            common_channel_size (int): The size of the FPN common channel. Default is 256.
         """
         super(denseFPN_121, self).__init__()
         original_densenet = models.densenet121(weights=weights)
+        self.common_channel_size = common_channel_size
         
         # Initial layers: extract features without modification
         self.encoder = nn.ModuleList([
             nn.Sequential(*list(original_densenet.features.children())[:6], nn.Dropout(0.1)),   # 128x12x12
             nn.Sequential(*list(original_densenet.features.children())[6:8], nn.Dropout(0.2)),  # 256x6x6
             nn.Sequential(*list(original_densenet.features.children())[8:10], nn.Dropout(0.3)), # 896x3x3
-            nn.Sequential(*list(original_densenet.features.children())[10:-1], nn.Dropout(0.3)) # 1920x3x3
+            nn.Sequential(*list(original_densenet.features.children())[10:], nn.Dropout(0.3))   # 1920x3x3
         ])
         
         # Define convolutional layers for adapting channel sizes
@@ -42,15 +135,6 @@ class denseFPN_121(nn.Module):
             for i in range(3)
         })
 
-        self.merge_layers = nn.Sequential(
-            nn.Conv2d(common_channel_size, output_channel_size, kernel_size=1), # kernel size 1 or 3 w padding 1
-            nn.BatchNorm2d(output_channel_size),
-            nn.ReLU(),
-            nn.Dropout(0.2) # 0.2
-        )
-        
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(output_feature_size)
-
     def forward(self, x):
         # Encoder
         features = []
@@ -67,37 +151,65 @@ class denseFPN_121(nn.Module):
             upsampled = F.interpolate(fpn_output, size=adapted_features[i].shape[-2:], mode='nearest')
             fpn_output = self.fpn[f'fpn{i+1}'](upsampled + adapted_features[i])
         
-        # Merge features
-        merged_features = self.merge_layers(fpn_output)
-        
-        merged_features = self.global_avg_pool(merged_features)
-        
-        return merged_features # 256x12x12
+        return fpn_output # 256x12x12
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        return self.common_channel_size
 
+    def conv_info(self):
+        """
+        Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer.
+        This function will gather information from both the DenseNet backbone and the FPN custom layers.
+        """
+        kernel_sizes, strides, paddings = [], [], []
+
+        # Traverse the encoder layers which are wrapped in Sequential blocks
+        for seq in self.encoder:
+            for layer in seq.modules():
+                if isinstance(layer, nn.Conv2d):
+                    kernel_sizes.append(layer.kernel_size[0])
+                    strides.append(layer.stride[0])
+                    paddings.append(layer.padding[0])
+
+        # Check adaptation layers
+        for layer in self.adaptation_layers.modules():
+            if isinstance(layer, nn.Conv2d):
+                kernel_sizes.append(layer.kernel_size[0])
+                strides.append(layer.stride[0])
+                paddings.append(layer.padding[0])
+
+        # FPN layers (each one is a single Conv2d in a ModuleList)
+        for layer in self.fpn.modules():
+            if isinstance(layer, nn.Conv2d):
+                kernel_sizes.append(layer.kernel_size[0])
+                strides.append(layer.stride[0])
+                paddings.append(layer.padding[0])
+
+        return kernel_sizes, strides, paddings
 
 class denseFPN_201(nn.Module):
     """ DenseNet201-based Feature Pyramid Network (FPN) for feature extraction.
         Total number of parameters:  19697280 (19.70 million) 
         Returns a feature map of size 256x12x12. """ 
-    def __init__(self, weights='DEFAULT', common_channel_size=256, output_channel_size=256, output_feature_size=12):
+    def __init__(self, weights='DEFAULT', common_channel_size=256):
         """
         Initializes the denseFPN_201 class.
 
         Args:
             weights (str): The weights to use for the EfficientNet V2 Small features. Default is 'DEFAULT'.
             common_channel_size (int): The size of the common channel. Default is 256.
-            output_channel_size (int): The size of the output channel. Default is 256.
-            output_feature_size (int): The size of the output feature. Default is 12.
         """
         super(denseFPN_201, self).__init__()
         original_densenet = models.densenet201(weights=weights)
+        self.common_channel_size = common_channel_size
         
         # Initial layers: extract features without modification
         self.encoder = nn.ModuleList([
-            nn.Sequential(*list(original_densenet.features.children())[:6], nn.Dropout(0.4)),   # 128x12x12
-            nn.Sequential(*list(original_densenet.features.children())[6:8], nn.Dropout(0.4)),  # 256x6x6
+            nn.Sequential(*list(original_densenet.features.children())[:6], nn.Dropout(0.1)),   # 128x12x12
+            nn.Sequential(*list(original_densenet.features.children())[6:8], nn.Dropout(0.2)),  # 256x6x6
             nn.Sequential(*list(original_densenet.features.children())[8:10], nn.Dropout(0.4)), # 896x3x3
-            nn.Sequential(*list(original_densenet.features.children())[10:-1], nn.Dropout(0.4)) # 1920x3x3
+            nn.Sequential(*list(original_densenet.features.children())[10:], nn.Dropout(0.4))   # 1920x3x3
         ])
         
         # Define convolutional layers for adapting channel sizes
@@ -113,15 +225,6 @@ class denseFPN_201(nn.Module):
             for i in range(3)
         })
 
-        self.merge_layers = nn.Sequential(
-            nn.Conv2d(common_channel_size, output_channel_size, kernel_size=1), # kernel size 1 or 3
-            nn.BatchNorm2d(output_channel_size),
-            nn.ReLU(),
-            nn.Dropout(0.4) # 0.2
-        )
-        
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(output_feature_size)
-
     def forward(self, x):
         # Encoder
         features = []
@@ -138,27 +241,29 @@ class denseFPN_201(nn.Module):
             upsampled = F.interpolate(fpn_output, size=adapted_features[i].shape[-2:], mode='nearest')
             fpn_output = self.fpn[f'fpn{i+1}'](upsampled + adapted_features[i])
         
-        # Merge features
-        merged_features = self.merge_layers(fpn_output)
-        merged_features = self.global_avg_pool(merged_features)
-        return merged_features # 256x12x12
+        return fpn_output # 256x12x12
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        # final_conv_layer = [layer for layer in self.fpn[-1].modules() if isinstance(layer, nn.Conv2d)][-1]
+        return self.common_channel_size
 
 
 class efficientFPN_v2_s(nn.Module):
     """ EfficientNet V2 Small-based Feature Pyramid Network (FPN) for feature extraction.
         Total number of parameters:  21008208 (21.01 million) 
         Returns a feature map of size 256x25x25. """ 
-    def __init__(self, weights='DEFAULT', common_channel_size=256, output_channel_size=256, output_feature_size=25):
+    def __init__(self, weights='DEFAULT', common_channel_size=256):
         """
         Initializes the efficientFPN_v2_s class.
 
         Args:
             weights (str): The weights to use for the EfficientNet V2 Small features. Default is 'DEFAULT'.
             common_channel_size (int): The size of the common channel. Default is 256.
-            output_channel_size (int): The size of the output channel. Default is 256.
-            output_feature_size (int): The size of the output feature. Default is 25.
         """
         super(efficientFPN_v2_s, self).__init__()
+        self.common_channel_size = common_channel_size
+        
         # Load EfficientNet V2 Small features
         efficientnet_v2_s = models.efficientnet_v2_s(weights=weights).features[:-1]
 
@@ -185,15 +290,6 @@ class efficientFPN_v2_s(nn.Module):
             for i in range(6)
         })
 
-        self.merge_layers = nn.Sequential(
-            nn.Conv2d(common_channel_size, output_channel_size, kernel_size=1),
-            nn.BatchNorm2d(output_channel_size),
-            nn.SiLU(),
-            nn.Dropout(0.3)
-        )
-        
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(output_feature_size)
-
     def forward(self, x):
         # Forward pass through encoders
         features = []
@@ -210,25 +306,29 @@ class efficientFPN_v2_s(nn.Module):
             upsampled = F.interpolate(fpn_output, size=adapted_features[i].shape[-2:], mode='nearest')
             fpn_output = self.fpn[f'fpn{i+1}'](upsampled + adapted_features[i])
         
-        # Merge features and apply global pooling
-        merged_features = self.merge_layers(fpn_output)
-        pooled_features = self.global_avg_pool(merged_features)
-        return pooled_features # 256x25x25
+        return fpn_output # 256x25x25
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        # final_conv_layer = [layer for layer in self.fpn[-1].modules() if isinstance(layer, nn.Conv2d)][-1]
+        return self.common_channel_size
+    
 
+############################################################################################################################################################################
+######################################################################## Encoder-Decoder Networks ##########################################################################
+############################################################################################################################################################################
 
 class efficientDecoder_v2_s(nn.Module):
     """ EfficientNet V2 Small-based encoder-decoder architecture for feature extraction.
         Total number of parameters:  20971120 (21.00 million) 
         Returns a feature map of size 256x25x25. """ 
-    def __init__(self, weights='DEFAULT', common_channel_size=None, output_channel_size=256, output_feature_size=25):
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
         """
         Initializes the efficientDecoder_v2_s class.
 
         Args:
             weights (str): The weights to use for the EfficientNet V2 Small features. Default is 'DEFAULT'.
             common_channel_size (int): The size of the common channel. Default is None.
-            output_channel_size (int): The size of the output channel. Default is 256.
-            output_feature_size (int): The size of the output feature. Default is 25.
         """
         super(efficientDecoder_v2_s, self).__init__()
         # Load EfficientNet V2 Small features
@@ -287,16 +387,6 @@ class efficientDecoder_v2_s(nn.Module):
             )
         ])
 
-        # Optional, merge layers to increase the number of channels
-        self.merge_layers = nn.Sequential(
-            nn.Conv2d(24, output_channel_size, kernel_size=1),
-            nn.BatchNorm2d(output_channel_size),
-            nn.SiLU(),
-            nn.Dropout(0.3)
-        )
-        
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(output_feature_size) # to reduce noise and overfitting
-
     def forward(self, x):
         # Encoder
         features = []
@@ -311,8 +401,10 @@ class efficientDecoder_v2_s(nn.Module):
             x = torch.cat((x, feature), dim=1)
             x = decoder(x)
         
-        x = self.merge_layers(x) # Introduced to increase the number of channels
-        pooled_features = self.global_avg_pool(x) # Introduced to reduce noise and overfitting
-        
-        return pooled_features # 256x25x25
+        return x # 256x25x25
+    
+    def get_output_channels(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        final_conv_layer = [layer for layer in self.decoders[-1].modules() if isinstance(layer, nn.Conv2d)][-1]
+        return final_conv_layer.weight.shape[1]
     

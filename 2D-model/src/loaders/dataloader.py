@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import torch
 from torchvision import transforms
 from torch.utils.data import Dataset
 from PIL import Image
@@ -36,7 +37,8 @@ class LIDCDataset(Dataset):
             # mean_counts = max(mean_counts, 1)  # Avoid division by zero
             # pos_counts = max(pos_counts, 1)  # Avoid division by zero
             # neg_counts = max(neg_counts, 1)  # Avoid division by zero
-            self.bweights[char_index - 1] = [mean_counts / neg_counts, mean_counts / pos_counts]
+            # self.bweights[char_index - 1] = [mean_counts / neg_counts, mean_counts / pos_counts]  # for binary classification
+            self.bweights[char_index - 1] = torch.tensor([mean_counts / neg_counts, mean_counts / pos_counts], dtype=torch.float32)
 
         # Global final prediction weights
         pos_final_pred_counts = (self.labels.iloc[:, 1] > 3).sum()
@@ -68,7 +70,8 @@ class LIDCDataset(Dataset):
             else:
                 binary_label_char = 1 if label_char > 3 else 0
 
-            bweight_char = self.bweights[char_index - 1][binary_label_char]
+            # bweight_char = self.bweights[char_index - 1][binary_label_char] # for binary classification
+            bweight_char = self.bweights[char_index - 1]
             label_chars.append(binary_label_char)
             bweight_chars.append(bweight_char)
 
