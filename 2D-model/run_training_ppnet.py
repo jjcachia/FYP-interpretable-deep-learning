@@ -9,7 +9,7 @@ from src.models.ProtoPNet import construct_PPNet
 from src.training.push import push_prototypes
 
 IMG_CHANNELS = 3
-IMG_SIZE = 224
+IMG_SIZE = 100
 CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
 
 DEFAULT_BATCH_SIZE = 50
