@@ -117,7 +117,7 @@ def main():
     construct_Model = MODEL_DICT[args.model]
     
     # Create the model instance
-    model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    model = construct_Model(base_architecture=args.backbone, weights=args.weights)
     
     # Print total number of parameters
     total_params = sum(p.numel() for p in model.parameters())
