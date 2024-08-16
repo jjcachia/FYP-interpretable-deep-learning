@@ -169,7 +169,7 @@ def main():
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
     warm_optimizer_specs = \
-    [{'params': model.features.adaptation_layer.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    [{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
