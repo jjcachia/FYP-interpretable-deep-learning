@@ -3,7 +3,7 @@ from PIL import Image
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories
-from src.loaders.dataloader import LIDCDataset
+from src.loaders.dataloaderv2 import LIDCDataset
 import src.training.train_ppnet as tnt
 from src.models.ProtoPNet import construct_PPNet
 from src.training.push import push_prototypes
@@ -12,7 +12,7 @@ IMG_CHANNELS = 3
 IMG_SIZE = 100
 CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
 
-DEFAULT_BATCH_SIZE = 50
+DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
 DEFAULT_LEARNING_RATE = 0.0001
 
@@ -157,7 +157,6 @@ def main():
     joint_optimizer_lrs = {'features': 1e-4,
                         'add_on_layers': 3e-3,
                         'prototype_vectors': 3e-3}
-    joint_lr_step_size = 5
     warm_optimizer_lrs = {'add_on_layers': 3e-3,
                         'prototype_vectors': 3e-3}
     last_layer_optimizer_lr = 1e-4
@@ -168,7 +167,6 @@ def main():
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
-    joint_lr_scheduler = torch.optim.lr_scheduler.StepLR(joint_optimizer, step_size=joint_lr_step_size, gamma=0.1)
 
     warm_optimizer_specs = \
     [{'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
