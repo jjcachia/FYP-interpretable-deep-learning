@@ -160,7 +160,7 @@ def main():
     joint_lr_step_size = 5
     warm_optimizer_lrs = {'add_on_layers': 3e-3,
                         'prototype_vectors': 3e-3}
-    last_layer_optimizer_lr = 1e-3
+    last_layer_optimizer_lr = 1e-4
     
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
@@ -190,14 +190,14 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = args.epochs
     num_warm_epochs = 10
-    push_start = 5
+    push_start = 10
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
     coefs = {
     'crs_ent': 1,#0.4,#1.1,#0.8,#1.1,#1,#0.5,#changed from 1 at 48
     'clst': 0.8*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
-    'sep': -0.08,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
+    'sep': -0.0004,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
     'l1': 1e-4
     }
 
