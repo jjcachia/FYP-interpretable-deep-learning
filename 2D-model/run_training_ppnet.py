@@ -22,7 +22,7 @@ MODEL_DICT = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='ppnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
@@ -139,8 +139,15 @@ def main():
     construct_Model = MODEL_DICT[args.model]
     
     # Create the model instance
-    # model = construct_Model(base_architecture=args.backbone, weights=args.weights)
-    model = construct_Model(base_architecture='denseFPN_121', weights='DEFAULT', img_size=100, prototype_shape=(50*5*2, 224, 1, 1), num_characteristics=5, prototype_activation_function='log', add_on_layers_type='bottleneck')
+    model = construct_Model(
+        base_architecture=args.backbone, 
+        weights=args.weights,
+        img_size=args.img_size,
+        prototype_shape=(50*5*2, 224, 1, 1),
+        num_characteristics=5,
+        prototype_activation_function='log', 
+        add_on_layers_type='bottleneck'
+    )
     
     # Print total number of parameters
     total_params = sum(p.numel() for p in model.parameters())

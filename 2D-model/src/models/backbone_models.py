@@ -30,7 +30,7 @@ class denseNet121(nn.Module):
         """ Returns the number of output channels from the final convolutional layer. """
         final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
         final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
-        return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
+        return final_bn_layer.weight.shape[0]
     
     def conv_info(self):
         """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """

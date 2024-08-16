@@ -85,7 +85,7 @@ class PPNet(nn.Module):
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(self.num_characteristics*self.prototypes_per_characteristic*12*12, self.num_characteristics*self.num_classes), # HxW is the output size of the feature extractor
+            nn.Linear(self.num_characteristics*self.prototypes_per_characteristic*3*3, self.num_characteristics*self.num_classes), # HxW is the output size of the feature extractor
             nn.BatchNorm1d(self.num_characteristics*self.num_classes),
             nn.ReLU(),
             nn.Dropout(0.1),
