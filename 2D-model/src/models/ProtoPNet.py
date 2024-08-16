@@ -185,7 +185,7 @@ class PPNet(nn.Module):
         # Compute distances and task logits for each characteristic
         task_logits = []
         task_probabilities = []
-        distances = []
+        similarities = []
         min_distances = []
         for i in range(self.num_characteristics):
             distance = self._l2_convolution(x, self.prototype_vectors[i]) # B x num_prototypes_per_characteristic x H x W, B x num_prototypes_per_characteristic x 1 x 1
@@ -196,7 +196,7 @@ class PPNet(nn.Module):
             task_logit = self.task_specific_classifier[i](similarity) # B x 2
             task_probability = F.softmax(task_logit, dim=1)
                         
-            distances.append(distance)
+            similarities.append(similarity)
             min_distances.append(min_distance)
             task_logits.append(task_logit)
             task_probabilities.append(task_probability)
