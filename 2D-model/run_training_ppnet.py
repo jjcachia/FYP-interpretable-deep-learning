@@ -155,11 +155,11 @@ def main():
     
     # Define the optimizers and learning rate schedulers
     joint_optimizer_lrs = {'features': 1e-4,
-                        'add_on_layers': 3e-3,
+                        'add_on_layers': 1e-3,
                         'prototype_vectors': 3e-3}
-    warm_optimizer_lrs = {'add_on_layers': 3e-3,
+    warm_optimizer_lrs = {'add_on_layers': 1e-3,
                         'prototype_vectors': 3e-3}
-    last_layer_optimizer_lr = 1e-4
+    last_layer_optimizer_lr = 5e-5
     
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
@@ -189,8 +189,8 @@ def main():
     
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = args.epochs
-    num_warm_epochs = 10
-    push_start = 10
+    num_warm_epochs = 15
+    push_start = 15
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
