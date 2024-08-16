@@ -143,7 +143,7 @@ def main():
         base_architecture=args.backbone, 
         weights=args.weights,
         img_size=args.img_size,
-        prototype_shape=(50*5*2, 224, 1, 1),
+        prototype_shape=(10*5*2, 100, 1, 1),
         num_characteristics=5,
         prototype_activation_function='log', 
         add_on_layers_type='bottleneck'
@@ -197,7 +197,7 @@ def main():
     coefs = {
     'crs_ent': 1,#0.4,#1.1,#0.8,#1.1,#1,#0.5,#changed from 1 at 48
     'clst': 0.8*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
-    'sep': -0.08*1.5,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
+    'sep': -0.08,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
     'l1': 1e-4
     }
 
@@ -261,7 +261,7 @@ def main():
             
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=model)
-                for i in range(20):
+                for i in range(5):
                     _ = tnt.train_ppnet(data_loader=train_dataloader, 
                                         model=model, 
                                         optimizer=last_layer_optimizer,
