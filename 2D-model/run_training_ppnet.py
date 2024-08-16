@@ -22,7 +22,7 @@ MODEL_DICT = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='ppnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
@@ -146,7 +146,7 @@ def main():
         prototype_shape=(10*5*2, 100, 1, 1),
         num_characteristics=5,
         prototype_activation_function='log', 
-        add_on_layers_type='bottleneck'
+        add_on_layers_type='regular'
     )
     
     # Print total number of parameters
@@ -155,11 +155,11 @@ def main():
     
     # Define the optimizers and learning rate schedulers
     joint_optimizer_lrs = {'features': 1e-4,
-                        'add_on_layers': 3e-3,
-                        'prototype_vectors': 3e-3}
-    warm_optimizer_lrs = {'add_on_layers': 3e-3,
-                        'prototype_vectors': 3e-3}
-    last_layer_optimizer_lr = 1e-4
+                        'add_on_layers': 1e-3,
+                        'prototype_vectors': 1e-3}
+    warm_optimizer_lrs = {'add_on_layers': 1e-3,
+                        'prototype_vectors': 1e-3}
+    last_layer_optimizer_lr = 5e-5 #1e-4
     
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
@@ -169,7 +169,9 @@ def main():
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
     warm_optimizer_specs = \
-    [{'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    [{'params': model.features.adaptation_layer.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    {'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
@@ -187,8 +189,8 @@ def main():
     
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = args.epochs
-    num_warm_epochs = 10
-    push_start = 10
+    num_warm_epochs = 15
+    push_start = 15
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
