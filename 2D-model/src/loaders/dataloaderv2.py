@@ -34,7 +34,7 @@ class LIDCDataset(Dataset):
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
                 transforms.RandomRotation(15),  # Random rotation within 15 degrees
-                transforms.RandomResizedCrop(100, scale=(0.8, 1.0)),  # Random cropping and resizing back to original dimensions
+                transforms.RandomResizedCrop(100, scale=(0.8, 1.0), antialias=True),  # Random cropping and resizing back to original dimensions
                 transforms.ColorJitter(brightness=0.2, contrast=0.2),  # Random brightness and contrast adjustment
                 transforms.RandomErasing(p=0.1)  # Randomly erase parts of the image
             ])
