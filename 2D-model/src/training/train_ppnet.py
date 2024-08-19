@@ -115,16 +115,16 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())
 
                 # Update the task losses
-                task_cross_entropy[i] += cross_entropy.item()
-                task_cluster_cost[i] += cluster_cost.item()
-                task_separation_cost[i] += separation_cost.item()
-                task_l1[i] += l1.item()
-                task_total_losses[i] += (cross_entropy + cluster_cost + separation_cost + l1).item()
+                task_cross_entropy[i] += (cross_entropy * coefs['crs_ent']).item()
+                task_cluster_cost[i] += (cluster_cost * coefs['clst']).item()
+                task_separation_cost[i] += (separation_cost * coefs['sep']).item()
+                task_l1[i] += (l1 * coefs['l1']).item()
+                task_total_losses[i] += task_loss.item()
 
             # Compute binary cross entropy loss for final output
             final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
             batch_loss += final_loss
-            final_total_loss += final_loss
+            final_total_loss += final_loss.item()
             
             # Compute statistics for final accuracy
             final_preds = final_output.round()
@@ -180,27 +180,29 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
             }
     
     if is_train:
-        task_weights = _adjust_weights(task_losses, exponent=3, target_sum=1)
+        task_weights = _adjust_weights(task_losses, exponent=3, target_sum=5)
         return metrics, task_weights
     else:
         return metrics
 
 def train_ppnet(model, data_loader, optimizer, device, use_l1_mask=True, coefs=None, task_weights=None):
     train_metrics, task_weights = _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_mask=use_l1_mask, coefs=coefs, task_weights=task_weights)
-    print(f"Train loss: {train_metrics['average_loss']:.5f}")
-    for i, (acc, bal_acc, task_loss) in enumerate(zip(train_metrics['task_accuracies'], train_metrics['task_balanced_accuracies'], train_metrics['task_losses']), 1):
-        print(f"Characteristic {i} - Train Loss: {task_loss:.5f}, Train Accuracy: {acc*100:.2f}%, Train Balanced Accuracy: {bal_acc*100:.2f}%")
+    print("\n Final Train Metrics:")
+    print(f"Total Loss: {train_metrics['average_loss']:.2f}")
+    for i, (bal_acc, task_loss, task_ce, task_cc, task_sc) in enumerate(zip(train_metrics['task_balanced_accuracies'], train_metrics['task_losses'], train_metrics['task_cross_entropy'], train_metrics['task_cluster_cost'], train_metrics['task_separation_cost']), 1):
+        print(f"Characteristic {i}  - Task Loss: {task_loss:.2f}, Cross Entropy: {task_ce:.2f}, Cluster Cost: {task_cc:.2f}, Separation Cost: {task_sc:.2f}, Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
-    print(f"Final Output       - Train Accuracy: {train_metrics['final_accuracy']*100:.2f}%, Train Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, Train F1 Score: {train_metrics['final_f1']*100:.2f}%")
+    print(f"Malignancy Prediction - Binary Cross Entropy Loss: {train_metrics['final_loss']:.2f}, Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, F1 Score: {train_metrics['final_f1']*100:.2f}%")
     return train_metrics, task_weights
 
 def test_ppnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_weights=None):
     test_metrics = _train_or_test(model, data_loader, None, device, is_train=False, use_l1_mask=use_l1_mask, coefs=coefs, task_weights=task_weights)
-    print(f"Test loss: {test_metrics['average_loss']:.5f}")
-    for i, (acc, bal_acc, task_loss) in enumerate(zip(test_metrics['task_accuracies'], test_metrics['task_balanced_accuracies'], test_metrics['task_losses']), 1):
-        print(f"Characteristic {i} - Train Loss: {task_loss:.5f}, Test Accuracy: {acc*100:.2f}%, Test Balanced Accuracy: {bal_acc*100:.2f}%")
+    print("\n Final Test Metrics:")
+    print(f"Total Loss: {test_metrics['average_loss']:.2f}")
+    for i, (bal_acc, task_loss, task_ce, task_cc, task_sc) in enumerate(zip(test_metrics['task_balanced_accuracies'], test_metrics['task_losses'], test_metrics['task_cross_entropy'], test_metrics['task_cluster_cost'], test_metrics['task_separation_cost']), 1):
+        print(f"Characteristic {i}  - Task Loss: {task_loss:.2f}, Cross Entropy: {task_ce:.2f}, Cluster Cost: {task_cc:.2f}, Separation Cost: {task_sc:.2f}, Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
-    print(f"Final Output       - Test Accuracy: {test_metrics['final_accuracy']*100:.2f}%, Test Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, Train F1 Score: {test_metrics['final_f1']*100:.2f}%")
+    print(f"Malignancy Prediction - Binary Cross Entropy Loss: {test_metrics['final_loss']:.2f}, Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1 Score: {test_metrics['final_f1']*100:.2f}%")
     return test_metrics
             
 def last_only(model):
@@ -212,7 +214,7 @@ def last_only(model):
     for p in model.task_specific_classifier.parameters():
         p.requires_grad = True
     for p in model.final_classifier.parameters():
-        p.requires_grad = True # was true
+        p.requires_grad = False # was true
 
 def warm_only(model):
     for p in model.features.encoder.parameters():

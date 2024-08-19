@@ -10,8 +10,12 @@ from src.training.push import push_prototypes
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
-# CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
-CHOSEN_CHARS = [False, False, False, True, True, False, False, True, True]
+
+# DEFAULT_IMG_CHANNELS = 3
+# DEFAULT_IMG_SIZE = 100
+
+# DEFAULT_CHARS = [False, True, False, True, True, False, False, True, True]
+CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
 
 DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
@@ -21,6 +25,7 @@ MODEL_DICT = {
     'ppnet': construct_PPNet
 }
 
+# TODO: Add number of prototypes as a parameter, prototype size, and more 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
     parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
@@ -156,11 +161,11 @@ def main():
     
     # Define the optimizers and learning rate schedulers
     joint_optimizer_lrs = {'features': 1e-4,
-                        'add_on_layers': 1e-3,
-                        'prototype_vectors': 1e-3}
-    warm_optimizer_lrs = {'add_on_layers': 1e-3,
-                        'prototype_vectors': 1e-3}
-    last_layer_optimizer_lr = 1e-3 # 5e-4
+                        'add_on_layers': 3e-3,
+                        'prototype_vectors': 3e-3}
+    warm_optimizer_lrs = {'add_on_layers': 3e-3,
+                        'prototype_vectors': 3e-3}
+    last_layer_optimizer_lr = 1e-4 # 5e-4
     
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
@@ -177,8 +182,8 @@ def main():
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
-    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
-                                  {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+                                 # {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
     last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
     
 
@@ -212,7 +217,7 @@ def main():
     task_weights = [1.0 / 5] * 5
     for epoch in range(epochs):
         # Print header
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t\n" + "-"*100)
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)
         # Train and test the model batch by batch
         epoch_start = time.time()  # Start time of the current epoch
         
@@ -244,7 +249,8 @@ def main():
         test_metrics = tnt.test_ppnet(data_loader=test_dataloader,
                                         model=model,
                                         device=device,
-                                        coefs=coefs)
+                                        coefs=coefs,
+                                        task_weights=task_weights)
         
         all_test_metrics.append(test_metrics)  # Append testing metrics for the epoch
         
@@ -262,7 +268,8 @@ def main():
             test_metrics = tnt.test_ppnet(data_loader=test_dataloader,
                                           model=model,
                                           device=device,
-                                          coefs=coefs)
+                                          coefs=coefs,
+                                          task_weights=task_weights)
             
             all_test_metrics.append(test_metrics)
             
@@ -279,8 +286,8 @@ def main():
                     _ = tnt.test_ppnet(data_loader=test_dataloader,
                                         model=model,
                                         device=device,
-                                        coefs=coefs)
-            
+                                        coefs=coefs,
+                                        task_weights=task_weights)
         
         # Save the model if the test loss has decreased
         # if test_metrics['average_loss'] < min_test_loss:
