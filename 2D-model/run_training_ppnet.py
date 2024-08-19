@@ -161,10 +161,10 @@ def main():
     
     # Define the optimizers and learning rate schedulers
     joint_optimizer_lrs = {'features': 1e-4,
-                        'add_on_layers': 3e-3,
-                        'prototype_vectors': 3e-3}
-    warm_optimizer_lrs = {'add_on_layers': 3e-3,
-                        'prototype_vectors': 3e-3}
+                        'add_on_layers': 1e-3,
+                        'prototype_vectors': 1e-3}
+    warm_optimizer_lrs = {'add_on_layers': 1e-3,
+                        'prototype_vectors': 1e-3}
     last_layer_optimizer_lr = 1e-4 # 5e-4
     
     joint_optimizer_specs = \
@@ -182,8 +182,8 @@ def main():
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
-    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
-                                 # {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
+                                 {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
     last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
     
 
