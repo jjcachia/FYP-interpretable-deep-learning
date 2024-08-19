@@ -191,8 +191,8 @@ def main():
     
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = args.epochs
-    num_warm_epochs = 15
-    push_start = 15
+    num_warm_epochs = 10
+    push_start = 10
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
