@@ -74,19 +74,19 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
                 
                 # Compute cross entropy cost for each characteristic
                 cross_entropy = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char[0])
-                cross_entropy *= (coefs['crs_ent'] if coefs else 1)
+                cross_entropy = cross_entropy * (coefs['crs_ent'] if coefs else 1)
                 
                 # Compute cluster cost for each characteristic
                 prototypes_of_correct_class = torch.t(prototype_char_identity[:,target]).to(device)    # batch_size * num_prototypes
                 inverted_distances, _ = torch.max((max_dist - min_distance) * prototypes_of_correct_class, dim=1)
                 cluster_cost = torch.mean((max_dist - inverted_distances) * bweight_char[range(bweight_char.size(0)), target]) # Increase the distance between the prototypes of the same class
-                cluster_cost *= (coefs['clst'] if coefs else 1)
+                cluster_cost = cluster_cost * (coefs['clst'] if coefs else 1)
                 
                 # Compute separation cost for each characteristic
                 prototypes_of_wrong_class = 1 - prototypes_of_correct_class
                 inverted_distances_to_nontarget_prototypes, _ = torch.max((max_dist - min_distance) * prototypes_of_wrong_class, dim=1)
                 separation_cost = torch.mean((max_dist - inverted_distances_to_nontarget_prototypes) * bweight_char[range(bweight_char.size(0)), 1 - target]) # Decrease the distance between the prototypes of different classes
-                separation_cost *= (coefs['sep'] if coefs else 1)
+                separation_cost = separation_cost * (coefs['sep'] if coefs else 1)
                 
                 # Compute l1 regularization for each characteristic
                 if use_l1_mask:
@@ -94,7 +94,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
                     l1 = (model.task_specific_classifier[i].weight * l1_mask).norm(p=1)
                 else:
                     l1 = model.task_specific_classifier[i].weight.norm(p=1) 
-                l1 *= (coefs['l1'] if coefs else 1)
+                l1 = l1 * (coefs['l1'] if coefs else 1)
                 
                 # Update the different task losses for each characteristic
                 task_cross_entropy[i] += cross_entropy.item()
