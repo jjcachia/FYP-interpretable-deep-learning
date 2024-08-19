@@ -10,9 +10,10 @@ from src.training.push import push_prototypes
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
-CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
+# CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
+CHOSEN_CHARS = [False, False, False, True, True, False, False, True, True]
 
-DEFAULT_BATCH_SIZE = 50
+DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
 DEFAULT_LEARNING_RATE = 0.0001
 
@@ -156,17 +157,15 @@ def main():
     # Define the optimizers and learning rate schedulers
     joint_optimizer_lrs = {'features': 1e-4,
                         'add_on_layers': 1e-3,
-                        'prototype_vectors': 3e-3}
+                        'prototype_vectors': 1e-3}
     warm_optimizer_lrs = {'add_on_layers': 1e-3,
-                        'prototype_vectors': 3e-3}
-    last_layer_optimizer_lr = 1e-4
+                        'prototype_vectors': 1e-3}
+    last_layer_optimizer_lr = 1e-3 # 5e-4
     
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
     {'params': model.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
-    {'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
-    {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
@@ -178,10 +177,9 @@ def main():
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
-    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
-                                 # {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
+                                  {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
     last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
-    
     
 
     ###############################################################################################################
@@ -196,6 +194,7 @@ def main():
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
+    
     coefs = {
     'crs_ent': 1,#0.4,#1.1,#0.8,#1.1,#1,#0.5,#changed from 1 at 48
     'clst': 0.8*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
@@ -220,21 +219,24 @@ def main():
         if epoch < num_warm_epochs:
             tnt.warm_only(model=model)
 
-            train_metrics = tnt.train_ppnet(data_loader=train_dataloader, 
-                                            model=model, 
-                                            optimizer=warm_optimizer,
-                                            device=device,
-                                            coefs=coefs)
+            train_metrics, task_weights = tnt.train_ppnet(data_loader=train_dataloader, 
+                                                          model=model, 
+                                                          optimizer=warm_optimizer,
+                                                          device=device,
+                                                          coefs=coefs,
+                                                          task_weights=task_weights)
+            
             all_train_metrics.append(train_metrics)  # Append training metrics for the epoch
         
         else:
             tnt.joint(model=model)
             
-            train_metrics = tnt.train_ppnet(data_loader=train_dataloader, 
-                                            model=model, 
-                                            optimizer=joint_optimizer,
-                                            device=device,
-                                            coefs=coefs)
+            train_metrics, task_weights = tnt.train_ppnet(data_loader=train_dataloader, 
+                                                          model=model, 
+                                                          optimizer=joint_optimizer,
+                                                          device=device,
+                                                          coefs=coefs,
+                                                          task_weights=task_weights)
             
             all_train_metrics.append(train_metrics)
         
@@ -243,6 +245,7 @@ def main():
                                         model=model,
                                         device=device,
                                         coefs=coefs)
+        
         all_test_metrics.append(test_metrics)  # Append testing metrics for the epoch
         
         if epoch >= push_start and epoch in push_epochs:
@@ -255,20 +258,24 @@ def main():
                             epoch_number=epoch,
                             save_prototype_class_identity=True
                         )
+            
             test_metrics = tnt.test_ppnet(data_loader=test_dataloader,
-                                        model=model,
-                                        device=device,
-                                        coefs=coefs)
+                                          model=model,
+                                          device=device,
+                                          coefs=coefs)
+            
             all_test_metrics.append(test_metrics)
             
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=model)
                 for i in range(5):
-                    _ = tnt.train_ppnet(data_loader=train_dataloader, 
-                                        model=model, 
-                                        optimizer=last_layer_optimizer,
-                                        device=device,
-                                        coefs=coefs)
+                    _, task_weights = tnt.train_ppnet(data_loader=train_dataloader, 
+                                                      model=model, 
+                                                      optimizer=last_layer_optimizer,
+                                                      device=device,
+                                                      coefs=coefs,
+                                                      task_weights=task_weights)
+                    
                     _ = tnt.test_ppnet(data_loader=test_dataloader,
                                         model=model,
                                         device=device,
