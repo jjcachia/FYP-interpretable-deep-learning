@@ -159,12 +159,14 @@ def main():
                         'prototype_vectors': 3e-3}
     warm_optimizer_lrs = {'add_on_layers': 1e-3,
                         'prototype_vectors': 3e-3}
-    last_layer_optimizer_lr = 5e-5
+    last_layer_optimizer_lr = 1e-4
     
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
     {'params': model.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
+    {'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
+    {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
@@ -176,8 +178,8 @@ def main():
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
-    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
-                                  {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+                                 # {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
     last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
     
     

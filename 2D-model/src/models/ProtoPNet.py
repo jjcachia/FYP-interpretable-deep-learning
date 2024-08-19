@@ -82,7 +82,7 @@ class PPNet(nn.Module):
 
         # Define a separate classifier for each characteristic
         self.task_specific_classifier = nn.ModuleList([
-            nn.Linear(self.prototypes_per_characteristic, 2) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
+            nn.Linear(self.prototypes_per_characteristic, self.num_classes) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
         ])
         
         self.final_classifier = nn.Sequential(
@@ -91,7 +91,7 @@ class PPNet(nn.Module):
             # nn.BatchNorm1d(self.num_characteristics*self.num_classes),
             # nn.ReLU(),
             # nn.Dropout(0.2),
-            nn.Linear(self.num_characteristics*self.num_classes, 1)
+            nn.Linear(self.num_characteristics*self.prototypes_per_characteristic, 1)
         )
 
         if init_weights:
@@ -203,7 +203,7 @@ class PPNet(nn.Module):
         
         # Concatenate task distances for the final classifier
         # final_output = torch.sigmoid(self.final_classifier(torch.cat(distances, dim=1))) # TODO: Use intermediate task logits instead of distances and feature extractor output
-        final_output = torch.sigmoid(self.final_classifier(torch.cat(similarity, dim=1)))
+        final_output = torch.sigmoid(self.final_classifier(torch.cat(similarities, dim=1)))
         return final_output, task_logits, min_distances
     
     def push_forward(self, x):

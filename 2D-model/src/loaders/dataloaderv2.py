@@ -29,10 +29,17 @@ class LIDCDataset(Dataset):
             train_or_test_int = 1 if train else 0
             self.labels = all_labels[all_labels['train_or_test'] != train_or_test_int]
 
-        self.transforms = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip()
-        ]) if transform and not push else None
+        if train and not push:
+            self.transforms = transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomRotation(15),  # Random rotation within 15 degrees
+                transforms.RandomResizedCrop(100, scale=(0.8, 1.0)),  # Random cropping and resizing back to original dimensions
+                transforms.ColorJitter(brightness=0.2, contrast=0.2),  # Random brightness and contrast adjustment
+                transforms.RandomErasing(p=0.1)  # Randomly erase parts of the image
+            ])
+        else:
+            self.transforms = None
 
         self.bweights = {}
         for char_index in range(1, self.num_characteristics + 1):  # 1-based index for characteristics
@@ -61,9 +68,12 @@ class LIDCDataset(Dataset):
     def __getitem__(self, index):
         path = self.labels.iloc[index, 0]
         image = Image.open(path)
+        
+        # Apply Preprocessing to the image
         if self.transform:
             image = self.transform(image)
 
+        # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
         for char_index in range(2, self.num_characteristics + 1):
@@ -84,9 +94,11 @@ class LIDCDataset(Dataset):
             label_chars.append(binary_label_char)
             bweight_chars.append(bweight_char)
 
+        # Extract the final prediction label and binary weight
         final_pred_label = 1 if (self.labels.iloc[index, 1] > 3) else 0
         bweight_fpred = self.bweight_final_pred[final_pred_label]
 
+        # Apply Data Augmentation to the image
         if self.transforms:
             image = self.transforms(image)
 
