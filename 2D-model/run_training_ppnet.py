@@ -149,7 +149,7 @@ def main():
         base_architecture=args.backbone, 
         weights=args.weights,
         img_size=args.img_size,
-        prototype_shape=(10*5*2, 100, 1, 1),
+        prototype_shape=(50*5*2, 256, 1, 1),
         num_characteristics=5,
         prototype_activation_function='log', 
         add_on_layers_type='bottleneck'
@@ -202,8 +202,8 @@ def main():
     
     coefs = {
     'crs_ent': 1,#0.4,#1.1,#0.8,#1.1,#1,#0.5,#changed from 1 at 48
-    'clst': 0.8*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
-    'sep': -0.0004,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
+    'clst': 0.8*10.5,#*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
+    'sep': -0.04,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
     'l1': 1e-4
     }
 
@@ -214,7 +214,7 @@ def main():
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
     # min_test_loss = float('inf')
-    task_weights = [1.0 / 5] * 5
+    task_weights = [5.0 / 5] * 5
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)

@@ -82,16 +82,28 @@ class PPNet(nn.Module):
 
         # Define a separate classifier for each characteristic
         self.task_specific_classifier = nn.ModuleList([
-            nn.Linear(self.prototypes_per_characteristic, self.num_classes) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
+            nn.Sequential(
+                nn.BatchNorm1d(self.prototypes_per_characteristic),
+                nn.ReLU(),
+                nn.Dropout(0.2),
+                nn.Linear(self.prototypes_per_characteristic, self.num_classes)
+            )for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
         ])
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
+            nn.BatchNorm1d(self.num_characteristics*self.prototypes_per_characteristic),
+            nn.ReLU(),
+            nn.Dropout(0.2),
             # nn.Linear(self.num_characteristics*self.prototypes_per_characteristic*12*12, self.num_characteristics*self.num_classes), # HxW is the output size of the feature extractor
             # nn.BatchNorm1d(self.num_characteristics*self.num_classes),
             # nn.ReLU(),
             # nn.Dropout(0.2),
-            nn.Linear(self.num_characteristics*self.prototypes_per_characteristic, 1)
+            nn.Linear(self.num_characteristics*self.prototypes_per_characteristic, self.num_characteristics*self.num_classes),
+            nn.BatchNorm1d(self.num_characteristics*self.num_classes),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(self.num_characteristics*self.num_classes, 1)
         )
 
         if init_weights:
