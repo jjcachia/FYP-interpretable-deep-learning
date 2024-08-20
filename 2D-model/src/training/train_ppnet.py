@@ -34,7 +34,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
     else:
         model.eval()
         
-    num_characteristics = model.num_characteristics.item()
+    num_characteristics = model.num_characteristics.to(device)
     
     total_loss = 0.0
     
