@@ -8,16 +8,15 @@ import src.training.train_ppnet as tnt
 from src.models.ProtoPNet import construct_PPNet
 from src.training.push import push_prototypes
 
-IMG_CHANNELS = 3
-IMG_SIZE = 100
 
-# DEFAULT_IMG_CHANNELS = 3
-# DEFAULT_IMG_SIZE = 100
+DEFAULT_IMG_CHANNELS = 3
+DEFAULT_IMG_SIZE = 224
 
-# DEFAULT_CHARS = [False, True, False, True, True, False, False, True, True]
-CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
+DEFAULT_CHARS = [False, False, False, True, True, False, False, True, True]
+DEFAULT_NUM_CHARS = sum(DEFAULT_CHARS)
+DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 224, 1, 1)
 
-DEFAULT_BATCH_SIZE = 100
+DEFAULT_BATCH_SIZE = 50
 DEFAULT_EPOCHS = 100
 DEFAULT_LEARNING_RATE = 0.0001
 
@@ -33,8 +32,8 @@ def parse_args():
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     
-    parser.add_argument('--img_channels', type=int, default=IMG_CHANNELS, help='Number of channels in the input image')
-    parser.add_argument('--img_size', type=int, default=IMG_SIZE, help='Size of the input image')
+    parser.add_argument('--img_channels', type=int, default=DEFAULT_IMG_CHANNELS, help='Number of channels in the input image')
+    parser.add_argument('--img_size', type=int, default=DEFAULT_IMG_SIZE, help='Size of the input image')
     
     parser.add_argument('--batch_size', type=int, default=DEFAULT_BATCH_SIZE, help='Batch size for training')
     parser.add_argument('--epochs', type=int, default=DEFAULT_EPOCHS, help='Number of epochs to train')
@@ -95,34 +94,19 @@ def main():
     ])
 
     # train set
-    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
-                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]),
+    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
+                                                            transform=preprocess,
                                                             train=True)
     train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
     # push set
-    LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
-                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]), train=True, push=True)
+    LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
+                                                            transform=preprocess, train=True, push=True)
     push_dataloader = torch.utils.data.DataLoader(LIDC_pushset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     
     # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
-                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]), 
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
+                                                            transform=preprocess, 
                                                             train=False)
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
@@ -149,10 +133,10 @@ def main():
         base_architecture=args.backbone, 
         weights=args.weights,
         img_size=args.img_size,
-        prototype_shape=(50*5*2, 256, 1, 1),
-        num_characteristics=5,
+        prototype_shape=DEFAULT_PROTOTYPE_SHAPE,
+        num_characteristics=DEFAULT_NUM_CHARS,
         prototype_activation_function='log', 
-        add_on_layers_type='bottleneck'
+        add_on_layers_type='regular'
     )
     
     # Print total number of parameters
@@ -202,7 +186,7 @@ def main():
     
     coefs = {
     'crs_ent': 1,#0.4,#1.1,#0.8,#1.1,#1,#0.5,#changed from 1 at 48
-    'clst': 0.8*10.5,#*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
+    'clst': 0.8*1.5,#*1.5,#0.2,#0.3,#1.1,#0.8,#5,#0.8,
     'sep': -0.04,#-0.0004,#-0.17,#-0.22,#-0.5, #used to be -0.08 #dm made it smaller to avoid the problem I noticed where as the separation loss is subtracted, having it too large makes your loss negative making everything explode (also -0.025 works but unstable)
     'l1': 1e-4
     }
@@ -214,7 +198,7 @@ def main():
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
     # min_test_loss = float('inf')
-    task_weights = [5.0 / 5] * 5
+    task_weights = [1.0] * 4
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)

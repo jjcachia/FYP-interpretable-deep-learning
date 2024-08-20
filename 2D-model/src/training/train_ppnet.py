@@ -33,18 +33,20 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
         model.train()
     else:
         model.eval()
+        
+    num_characteristics = model.num_characteristics.item()
     
-    total_loss = 0
+    total_loss = 0.0
     
-    task_total_losses = [0.0] * 5
-    task_cross_entropy = [0.0] * 5
-    task_cluster_cost = [0.0] * 5
-    task_separation_cost = [0.0] * 5
-    task_l1 = [0.0] * 5
-    total_correct = [0] * 5  # For tasks
-    total_samples = [0] * 5  # For tasks
-    final_pred_targets = [[] for _ in range(5)] # For calculating balanced accuracy for each characteristic
-    final_pred_outputs = [[] for _ in range(5)] # For calculating balanced accuracy for each characteristic
+    task_total_losses = [0.0] * num_characteristics
+    task_cross_entropy = [0.0] * num_characteristics
+    task_cluster_cost = [0.0] * num_characteristics
+    task_separation_cost = [0.0] * num_characteristics
+    task_l1 = [0.0] * num_characteristics
+    total_correct = [0] * num_characteristics  # For tasks
+    total_samples = [0] * num_characteristics  # For tasks
+    final_pred_targets = [[] for _ in range(num_characteristics)] # For calculating balanced accuracy for each characteristic
+    final_pred_outputs = [[] for _ in range(num_characteristics)] # For calculating balanced accuracy for each characteristic
     
     final_total_loss = 0.0
     final_correct = 0
@@ -220,14 +222,16 @@ def last_only(model):
         p.requires_grad = True # was true
 
 def warm_only(model):
-    for p in model.features.encoder.parameters():
-        p.requires_grad = False
-    for p in model.features.adaptation_layers.parameters():
-        p.requires_grad = True
-    for p in model.features.fpn.parameters():
-        p.requires_grad = True
-    # for p in model.features.parameters():
-    #     p.requires_grad = False
+    if model.features.encoder is not None:
+        for p in model.features.encoder.parameters():
+            p.requires_grad = False
+        for p in model.features.adaptation_layers.parameters():
+            p.requires_grad = True
+        for p in model.features.fpn.parameters():
+            p.requires_grad = True
+    else:
+        for p in model.features.parameters():
+            p.requires_grad = False
     for p in model.add_on_layers.parameters():
         p.requires_grad = True
     model.prototype_vectors.requires_grad = True

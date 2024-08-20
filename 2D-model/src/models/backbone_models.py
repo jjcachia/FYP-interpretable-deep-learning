@@ -67,6 +67,15 @@ class denseNet169(nn.Module):
         final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
         return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
 
+    def conv_info(self):
+        """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
+        conv_layers = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)]
+        kernel_sizes, strides, paddings = [], [], []
+        for conv in conv_layers:
+            kernel_sizes.append(conv.kernel_size[0])
+            strides.append(conv.stride[0])
+            paddings.append(conv.padding[0])
+        return kernel_sizes, strides, paddings
 
 class denseNet201(nn.Module):
     """ DenseNet201-based Feature Extractor for feature extraction.
@@ -92,7 +101,16 @@ class denseNet201(nn.Module):
         final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
         final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
         return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
-
+    
+    def conv_info(self):
+        """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
+        conv_layers = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)]
+        kernel_sizes, strides, paddings = [], [], []
+        for conv in conv_layers:
+            kernel_sizes.append(conv.kernel_size[0])
+            strides.append(conv.stride[0])
+            paddings.append(conv.padding[0])
+        return kernel_sizes, strides, paddings
 
 ############################################################################################################################################################################
 ######################################################################### Feature Pyramid Networks ##########################################################################
@@ -247,6 +265,37 @@ class denseFPN_201(nn.Module):
         """ Returns the number of output channels from the final convolutional layer. """
         # final_conv_layer = [layer for layer in self.fpn[-1].modules() if isinstance(layer, nn.Conv2d)][-1]
         return self.common_channel_size
+    
+    def conv_info(self):
+        """
+        Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer.
+        This function will gather information from both the DenseNet backbone and the FPN custom layers.
+        """
+        kernel_sizes, strides, paddings = [], [], []
+
+        # Traverse the encoder layers which are wrapped in Sequential blocks
+        for seq in self.encoder:
+            for layer in seq.modules():
+                if isinstance(layer, nn.Conv2d):
+                    kernel_sizes.append(layer.kernel_size[0])
+                    strides.append(layer.stride[0])
+                    paddings.append(layer.padding[0])
+
+        # Check adaptation layers
+        for layer in self.adaptation_layers.modules():
+            if isinstance(layer, nn.Conv2d):
+                kernel_sizes.append(layer.kernel_size[0])
+                strides.append(layer.stride[0])
+                paddings.append(layer.padding[0])
+
+        # FPN layers (each one is a single Conv2d in a ModuleList)
+        for layer in self.fpn.modules():
+            if isinstance(layer, nn.Conv2d):
+                kernel_sizes.append(layer.kernel_size[0])
+                strides.append(layer.stride[0])
+                paddings.append(layer.padding[0])
+
+        return kernel_sizes, strides, paddings
 
 
 class efficientFPN_v2_s(nn.Module):
@@ -312,6 +361,37 @@ class efficientFPN_v2_s(nn.Module):
         """ Returns the number of output channels from the final convolutional layer. """
         # final_conv_layer = [layer for layer in self.fpn[-1].modules() if isinstance(layer, nn.Conv2d)][-1]
         return self.common_channel_size
+    
+    def conv_info(self):
+        """
+        Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer.
+        This function will gather information from both the DenseNet backbone and the FPN custom layers.
+        """
+        kernel_sizes, strides, paddings = [], [], []
+
+        # Traverse the encoder layers which are wrapped in Sequential blocks
+        for seq in self.encoder:
+            for layer in seq.modules():
+                if isinstance(layer, nn.Conv2d):
+                    kernel_sizes.append(layer.kernel_size[0])
+                    strides.append(layer.stride[0])
+                    paddings.append(layer.padding[0])
+
+        # Check adaptation layers
+        for layer in self.adaptation_layers.modules():
+            if isinstance(layer, nn.Conv2d):
+                kernel_sizes.append(layer.kernel_size[0])
+                strides.append(layer.stride[0])
+                paddings.append(layer.padding[0])
+
+        # FPN layers (each one is a single Conv2d in a ModuleList)
+        for layer in self.fpn.modules():
+            if isinstance(layer, nn.Conv2d):
+                kernel_sizes.append(layer.kernel_size[0])
+                strides.append(layer.stride[0])
+                paddings.append(layer.padding[0])
+
+        return kernel_sizes, strides, paddings
     
 
 ############################################################################################################################################################################

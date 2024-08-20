@@ -65,9 +65,9 @@ class PPNet(nn.Module):
         else:
             self.add_on_layers = nn.Sequential(
                 nn.Conv2d(in_channels=first_add_on_layer_in_channels, out_channels=self.prototype_shape[1], kernel_size=1),
-                nn.BatchNorm2d(self.prototype_shape[1]),
+                # nn.BatchNorm2d(self.prototype_shape[1]),
                 nn.ReLU(),
-                nn.Dropout(0.2),
+                # nn.Dropout(0.2),
                 nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
                 nn.Sigmoid()
                 )
@@ -87,9 +87,9 @@ class PPNet(nn.Module):
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.BatchNorm1d(self.num_characteristics*self.prototypes_per_characteristic),
-            nn.ReLU(),
-            nn.Dropout(0.2),
+            # nn.BatchNorm1d(self.num_characteristics*self.prototypes_per_characteristic),
+            # nn.ReLU(),
+            # nn.Dropout(0.2),
             # nn.Linear(self.num_characteristics*self.prototypes_per_characteristic*12*12, self.num_characteristics*self.num_classes), # HxW is the output size of the feature extractor
             # nn.BatchNorm1d(self.num_characteristics*self.num_classes),
             # nn.ReLU(),
