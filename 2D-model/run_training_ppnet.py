@@ -10,13 +10,13 @@ from src.training.push import push_prototypes
 
 
 DEFAULT_IMG_CHANNELS = 3
-DEFAULT_IMG_SIZE = 224
+DEFAULT_IMG_SIZE = 100
 
 DEFAULT_CHARS = [False, False, False, True, True, False, False, True, True]
 DEFAULT_NUM_CHARS = sum(DEFAULT_CHARS)
-DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 224, 1, 1)
+DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 128, 1, 1)
 
-DEFAULT_BATCH_SIZE = 50
+DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
 DEFAULT_LEARNING_RATE = 0.0001
 
@@ -27,7 +27,7 @@ MODEL_DICT = {
 # TODO: Add number of prototypes as a parameter, prototype size, and more 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--backbone', type=str, default='denseFPN_201', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='ppnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
@@ -95,18 +95,33 @@ def main():
 
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=preprocess,
+                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
+                                                                        transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
+                                                                        transforms.ToTensor(), 
+                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+                                                                        transforms.Normalize(mean, std)
+                                                                        ]),
                                                             train=True)
     train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
     # push set
     LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=preprocess, train=True, push=True)
+                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
+                                                                        transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
+                                                                        transforms.ToTensor(), 
+                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+                                                                        transforms.Normalize(mean, std)
+                                                                        ]), train=True, push=True)
     push_dataloader = torch.utils.data.DataLoader(LIDC_pushset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     
     # test set
     LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=preprocess, 
+                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
+                                                                        transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
+                                                                        transforms.ToTensor(), 
+                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+                                                                        transforms.Normalize(mean, std)
+                                                                        ]),
                                                             train=False)
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
@@ -179,7 +194,7 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = args.epochs
     num_warm_epochs = 10
-    push_start = 10
+    push_start = 15
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
@@ -239,7 +254,7 @@ def main():
         all_test_metrics.append(test_metrics)  # Append testing metrics for the epoch
         
         if epoch >= push_start and epoch in push_epochs:
-            print(f"Pushing prototypes at epoch {epoch}")
+            print(f"\nPushing prototypes at epoch {epoch}\n")
             push_prototypes(push_dataloader, 
                             model, 
                             class_specific=True, 

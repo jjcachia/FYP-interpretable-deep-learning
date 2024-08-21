@@ -82,7 +82,7 @@ class PPNet(nn.Module):
 
         # Define a separate classifier for each characteristic
         self.task_specific_classifier = nn.ModuleList([
-            nn.Linear(self.prototypes_per_characteristic, self.num_classes) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
+            nn.Linear(self.prototypes_per_characteristic, self.num_classes, bias=False) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
         ])
         
         self.final_classifier = nn.Sequential(

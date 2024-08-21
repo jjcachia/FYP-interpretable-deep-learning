@@ -27,15 +27,15 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
     prototype_network_parallel.to(device).eval()
 
     # Assuming prototype_network_parallel.module.prototype_vectors is a list of tensors
-    all_prototype_shapes = [prototypes.shape for prototypes in prototype_network_parallel.prototype_vectors]
-    all_n_prototypes = [shape[0] for shape in all_prototype_shapes]
+    all_prototype_shapes = [prototypes.shape for prototypes in prototype_network_parallel.prototype_vectors] # Num Chars x P x C x H x W
+    all_n_prototypes = [shape[0] for shape in all_prototype_shapes]   # Num Chars x P
     
     # Saves the closest distance to the prototype
-    all_global_min_proto_dist = [np.full(n_prototypes, np.inf) for n_prototypes in all_n_prototypes]
+    all_global_min_proto_dist = [np.full(n_prototypes, np.inf) for n_prototypes in all_n_prototypes]    # Num Chars x P
     
     # Saves the patch that minimizes the distance to the prototype
     all_global_min_fmap_patches = [np.zeros([n_prototypes, shape[1], shape[2], shape[3]]) 
-                                   for n_prototypes, shape in zip(all_n_prototypes, all_prototype_shapes)]
+                                   for n_prototypes, shape in zip(all_n_prototypes, all_prototype_shapes)]  # Num Chars x P x C x H x W
     
     # Assuming the same bounding box and class identity handling applies to all characteristics
     # Initialize proto_rf_boxes and proto_bound_boxes with appropriate shapes
@@ -131,7 +131,7 @@ def update_prototypes_on_batch(search_batch_input,
     
     # Send the data back to the cpu
     protoL_input_ = np.copy(protoL_input_torch.detach().cpu().numpy())  # (batch_size, C, H, W)
-    proto_dist_ = np.copy(proto_dist_torch[characteristic_index].detach().cpu().numpy())    # (batch_size, num_characteristics, num_prototypes_per_characteristic, H, W)
+    proto_dist_ = np.copy(proto_dist_torch[characteristic_index].detach().cpu().numpy())    # (batch_size, num_prototypes_per_characteristic, H, W)
 
     del protoL_input_torch, proto_dist_torch
 
@@ -166,9 +166,8 @@ def update_prototypes_on_batch(search_batch_input,
         batch_min_proto_dist_j = np.amin(proto_dist_j)
         
         if batch_min_proto_dist_j < global_min_proto_dist[j]:
-            batch_argmin_proto_dist_j = \
-                list(np.unravel_index(np.argmin(proto_dist_j, axis=None),
-                                      proto_dist_j.shape))
+            batch_argmin_proto_dist_j = list(np.unravel_index(np.argmin(proto_dist_j, axis=None), proto_dist_j.shape)) # [feature_index, h, w]
+            
             if class_specific:
                 '''
                 change the argmin index from the index among
@@ -187,7 +186,7 @@ def update_prototypes_on_batch(search_batch_input,
             batch_min_fmap_patch_j = protoL_input_[img_index_in_batch,
                                                    :,
                                                    fmap_height_start_index:fmap_height_end_index,
-                                                   fmap_width_start_index:fmap_width_end_index]
+                                                   fmap_width_start_index:fmap_width_end_index] # Batch x C x H x W
 
             global_min_proto_dist[j] = batch_min_proto_dist_j
             global_min_fmap_patches[j] = batch_min_fmap_patch_j

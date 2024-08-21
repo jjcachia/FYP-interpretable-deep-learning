@@ -185,7 +185,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
             }
     
     if is_train:
-        task_weights = _adjust_weights(task_losses, exponent=5, target_sum=5)
+        task_weights = _adjust_weights(task_losses, exponent=5, target_sum=4)
         return metrics, task_weights
     else:
         return metrics
@@ -236,9 +236,9 @@ def warm_only(model):
         p.requires_grad = True
     model.prototype_vectors.requires_grad = True
     for p in model.task_specific_classifier.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
     for p in model.final_classifier.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
         
 def joint(model):
     for p in model.features.parameters():
