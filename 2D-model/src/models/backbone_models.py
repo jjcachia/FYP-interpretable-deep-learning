@@ -317,7 +317,7 @@ class efficientFPN_v2_s(nn.Module):
         efficientnet_v2_s = models.efficientnet_v2_s(weights=weights).features[:-1]
 
         # Modularize encoders
-        self.encoders = nn.ModuleList([
+        self.encoder= nn.ModuleList([
             nn.Sequential(*list(efficientnet_v2_s.children())[:2], nn.Dropout(0.1)),    # 24x50x50
             nn.Sequential(*list(efficientnet_v2_s.children())[2:3], nn.Dropout(0.1)),   # 48x25x25
             nn.Sequential(*list(efficientnet_v2_s.children())[3:4], nn.Dropout(0.2)),   # 64x13x13
