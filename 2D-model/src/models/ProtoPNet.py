@@ -42,6 +42,7 @@ class PPNet(nn.Module):
         
         # Define the add-on layers
         first_add_on_layer_in_channels = features.get_output_channels()
+        
         # self.add_on_layers = self.initialize_add_on_layers(first_add_on_layer_in_channels, add_on_layers_type)
         if add_on_layers_type == 'bottleneck':
             add_on_layers = []
@@ -65,9 +66,9 @@ class PPNet(nn.Module):
         else:
             self.add_on_layers = nn.Sequential(
                 nn.Conv2d(in_channels=first_add_on_layer_in_channels, out_channels=self.prototype_shape[1], kernel_size=1),
-                # nn.BatchNorm2d(self.prototype_shape[1]),
+                nn.BatchNorm2d(self.prototype_shape[1]),
                 nn.ReLU(),
-                # nn.Dropout(0.2),
+                nn.Dropout(0.2),
                 nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
                 nn.Sigmoid()
                 )

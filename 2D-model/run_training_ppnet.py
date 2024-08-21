@@ -14,7 +14,7 @@ DEFAULT_IMG_SIZE = 100
 
 DEFAULT_CHARS = [False, False, False, True, True, False, False, True, True]
 DEFAULT_NUM_CHARS = sum(DEFAULT_CHARS)
-DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 128, 1, 1)
+DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 128, 2, 2)
 
 DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
@@ -27,7 +27,7 @@ MODEL_DICT = {
 # TODO: Add number of prototypes as a parameter, prototype size, and more 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseFPN_201', help='Feature Extractor Backbone to use')
+    parser.add_argument('--backbone', type=str, default='efficientFPN_v2_s', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='ppnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
@@ -274,7 +274,7 @@ def main():
             
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=model)
-                for i in range(20):
+                for i in range(10):
                     _, task_weights = tnt.train_ppnet(data_loader=train_dataloader, 
                                                       model=model, 
                                                       optimizer=last_layer_optimizer,
