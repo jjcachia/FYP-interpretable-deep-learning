@@ -194,7 +194,7 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = args.epochs
     num_warm_epochs = 10
-    push_start = 15
+    push_start = 10
     push_epochs = [i for i in range(epochs) if i % push_start == 0]
     
     prototype_activation_function = 'log'
@@ -274,7 +274,7 @@ def main():
             
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=model)
-                for i in range(5):
+                for i in range(20):
                     _, task_weights = tnt.train_ppnet(data_loader=train_dataloader, 
                                                       model=model, 
                                                       optimizer=last_layer_optimizer,

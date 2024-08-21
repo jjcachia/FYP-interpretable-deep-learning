@@ -247,7 +247,7 @@ def joint(model):
         p.requires_grad = True
     model.prototype_vectors.requires_grad = True
     for p in model.task_specific_classifier.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
     for p in model.final_classifier.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
     
