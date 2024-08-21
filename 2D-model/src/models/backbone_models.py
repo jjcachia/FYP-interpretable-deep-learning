@@ -342,7 +342,7 @@ class efficientFPN_v2_s(nn.Module):
     def forward(self, x):
         # Forward pass through encoders
         features = []
-        for encoder in self.encoders:
+        for encoder in self.encoder:
             x = encoder(x)
             features.append(x)
         
