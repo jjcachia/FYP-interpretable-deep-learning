@@ -151,9 +151,9 @@ class XProtoNet(PPNet):
         x = self.features(x)
         
         features_extracted_list = []
-        similarity_list = []
+        inverted_similarity_list = []
         occurrence_map_list = []
-        logits_list = []
+        preds_list = []
         for characteristic_index in range(self.num_characteristics):
             feature_map = self.add_on_layers_module[characteristic_index](x).unsqueeze(1)  # shape (N, 1, 128, H, W)
             occurrence_map = self.get_occurence_map_absolute_val(x,characteristic_index)  # shape (N, P, 1, H, W)
@@ -167,14 +167,15 @@ class XProtoNet(PPNet):
 
             # classification layer
             logits = self.task_specific_classifier[characteristic_index](similarity)
+            preds = logits.softmax(dim=1)
             
             features_extracted_list.append(features_extracted)
-            similarity_list.append(similarity)
+            inverted_similarity_list.append(1-similarity)
             occurrence_map_list.append(occurrence_map)
-            logits_list.append(logits)
+            preds_list.append(preds)
 
         # return features_extracted, 1 - similarity, occurrence_map, logits
-        return features_extracted_list, 1 - similarity_list, occurrence_map_list, logits_list
+        return features_extracted_list, inverted_similarity_list, occurrence_map_list, preds_list
     
 def construct_XPNet(
     base_architecture,

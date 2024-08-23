@@ -13,7 +13,7 @@ def push_prototypes(
     model,  # pytorch network with feature encoder and prototype vectors
     device,
     class_specific=True,  # enable pushing protos from only the alotted class
-    abstain_class=True,  # indicates K+1-th class is of the "abstain" type
+    abstain_class=False,  # indicates K+1-th class is of the "abstain" type
     preprocess_input_function=None,  # normalize if needed
     root_dir_for_saving_prototypes=None,  # if not None, prototypes will be saved in this dir
     epoch_number=None,  # if not provided, prototypes saved previously will be overwritten
@@ -67,18 +67,18 @@ def push_prototypes(
         K = num_classes
 
     # keep track of the input embedding closest to each prototype
-    proto_dist_ = [np.full(P, np.inf)] * num_characteristics  # saves the distances to prototypes (distance = 1-CosineSimilarities). shape (P)
+    proto_dist_ = [np.full(P, np.inf) for _ in range(num_characteristics)]  # saves the distances to prototypes (distance = 1-CosineSimilarities). shape (P)
     # save some information dynamically for each prototype
     # which are updated whenever a closer match to prototype is found
-    occurrence_map_ = [None for _ in range(P)] * num_characteristics # saves the computed occurence maps. shape (P, 1, H, W)
+    occurrence_map_ = [[None for _ in range(P)] for _ in range(num_characteristics)] # saves the computed occurence maps. shape (P, 1, H, W)
     # saves the input to prototypical layer (conv feature * occurrence map), shape (P, D)
-    protoL_input_ = [None for _ in range(P)] * num_characteristics
+    protoL_input_ = [[None for _ in range(P)] for _ in range(num_characteristics)]
     # saves the input images with embeddings closest to each prototype. shape (P, 3, Ho, Wo)
-    image_ = [None for _ in range(P)] * num_characteristics
+    image_ = [[None for _ in range(P)] for _ in range(num_characteristics)]
     # saves the gt label. shape (P)
-    gt_ = [None for _ in range(P)] * num_characteristics
+    gt_ = [[None for _ in range(P)] for _ in range(num_characteristics)]
     # saves the prediction logits of cases seen. shape (P, K)
-    pred_ = [None for _ in range(P)] * num_characteristics
+    pred_ = [[None for _ in range(P)] for _ in range(num_characteristics)]
     # saves the filenames of cases closest to each prototype. shape (P)
     # filename_ = [None for _ in range(P)] * num_characteristics # TODO: add filename in getitem of dataloader
 
@@ -89,26 +89,27 @@ def push_prototypes(
         # x = data_sample["cine"]  
         
         if preprocess_input_function is not None:
-            x = preprocess_input_function(X)
+            X = preprocess_input_function(X)
 
         # get the network outputs for this instance
         with torch.no_grad():
-            x = x.to(device)    # shape (B, 3, Ho, Wo)
+            x = X.to(device)    # shape (B, 3, Ho, Wo)
             (
                 protoL_input_torch,
                 proto_dist_torch,
                 occurrence_map_torch,
-                logits,
+                pred_torch,
             ) = model.push_forward(x)
-            pred_torch = logits.softmax(dim=1)
+            # pred_torch = logits.softmax(dim=1)
 
-        gt = y.detach().cpu().numpy()  # shape (B)
+        # gt = y.detach().cpu().numpy()  # shape (B)
         image = x.detach().cpu().numpy()  # shape (B, 3, Ho, Wo)
         # filename = data_sample["filename"]  # shape (B) 
         
         for characteristic_idx in range(num_characteristics):
             proto_class_identity = np.argmax(model.prototype_class_identity[characteristic_idx].cpu().numpy(), axis=1)  # shape (P)
             # record down batch data as numpy arrays
+            gt = y[characteristic_idx].detach().cpu().numpy()
             protoL_input = protoL_input_torch[characteristic_idx].detach().cpu().numpy()
             proto_dist = proto_dist_torch[characteristic_idx].detach().cpu().numpy()
             occurrence_map = occurrence_map_torch[characteristic_idx].detach().cpu().numpy()
@@ -128,6 +129,7 @@ def push_prototypes(
                 # if the distance this batch is smaller than prev.best, save it
                 if proto_dist_j_min <= proto_dist_[characteristic_idx][prototype_idx]:
                     a = np.argmin(proto_dist_j)
+                    
                     proto_dist_[characteristic_idx][prototype_idx] = proto_dist_j_min
                     protoL_input_[characteristic_idx][prototype_idx] = protoL_input[a, prototype_idx]
                     occurrence_map_[characteristic_idx][prototype_idx] = occurrence_map[a, prototype_idx]

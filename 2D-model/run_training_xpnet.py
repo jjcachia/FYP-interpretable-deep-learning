@@ -201,7 +201,7 @@ def main():
     
     coefs = {
     'crs_ent': 1,
-    'clst': 0.8,
+    'clst': 0.08,
     'sep': 0.08,
     'l1': 1e-4,
     'l1_occ': 1e-4,
@@ -259,6 +259,7 @@ def main():
             print(f"\nPushing prototypes at epoch {epoch}\n")
             push_prototypes(push_dataloader, 
                             model, 
+                            device=device,
                             class_specific=True, 
                             preprocess_input_function=None, 
                             root_dir_for_saving_prototypes=paths['prototypes'],
