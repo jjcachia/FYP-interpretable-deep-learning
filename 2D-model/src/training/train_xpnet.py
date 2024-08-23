@@ -1,9 +1,16 @@
-from tqdm import tqdm
 import torch
-from torch.utils.data import DataLoader
-from torch.optim import optimizer
-import torch.nn.functional as F
-from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score
+from tqdm import tqdm
+
+from src.loss.loss import (
+    CeLoss,
+    ClusterRoiFeat,
+    SeparationRoiFeat,
+    OrthogonalityLoss,
+    L_norm,
+    TransformLoss,
+)
+
+from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score, precision_score
 
 def _adjust_weights(task_losses, exponent=2, target_sum=5):
     """
@@ -33,21 +40,34 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
         model.train()
     else:
         model.eval()
-        
-    num_characteristics = model.num_characteristics
     
+    num_characteristics = model.num_characteristics
+    num_classes = model.num_classes
+    
+    # Initialize the loss functions
+    CrossEntropy = CeLoss(loss_weight=coefs['crs_ent'])
+    Cluster = ClusterRoiFeat(loss_weight=coefs['clst'], num_classes=num_classes)
+    Separation = SeparationRoiFeat(loss_weight=coefs['sep'], num_classes=num_classes)
+    # Orthogonality = OrthogonalityLoss(loss_weight=coefs['orth'], num_classes=num_classes)
+    Transform = TransformLoss(loss_weight=coefs['trans'])
+    L1_occ = L_norm(loss_weight=coefs['l1_occ'], mask=None, reduction="mean", p=1)
+    
+    # Initialize the task losses for each characteristic
     task_total_losses = [0.0] * num_characteristics
     task_cross_entropy = [0.0] * num_characteristics
     task_cluster_cost = [0.0] * num_characteristics
     task_separation_cost = [0.0] * num_characteristics
     task_l1 = [0.0] * num_characteristics
-    task_targets_all = [[] for _ in range(num_characteristics)] # For calculating balanced accuracy for each characteristic
-    task_predictions_all = [[] for _ in range(num_characteristics)] # For calculating balanced accuracy for each characteristic
-    
+    task_occ_cost = [0.0] * num_characteristics
+    task_targets_all = [[] for _ in range(num_characteristics)]
+    task_predictions_all = [[] for _ in range(num_characteristics)]
+
+    # Initialize the final output losses
     final_total_loss = 0.0
-    final_targets_all = []  # For calculating balanced accuracy for final output
-    final_predictions_all = []  # For calculating balanced accuracy for final output
+    final_targets_all = []
+    final_predictions_all = []
     
+    # Initialize the total loss
     total_loss = 0.0
     
     n_batches = 0
@@ -60,55 +80,52 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
             final_target = final_target.float().unsqueeze(1).to(device)
             bweight = bweight.float().unsqueeze(1).to(device)
             
-            final_output, task_outputs, min_distances = model(X)
+            final_output, task_outputs, similarities, occurrence_maps = model(X)
             
             ############################ Compute Losses ############################
             
             batch_loss = 0.0
-            for characteristic_idx, (task_output, min_distance, target, bweight_char) in enumerate(zip(task_outputs, min_distances, targets, bweights_chars)):
-                
-                # Get the prototype identity for each characteristic
+            for characteristic_idx, (task_output, similarity, occurrence_map, target, bweight_char) in enumerate(zip(task_outputs, similarities, occurrence_maps, targets, bweights_chars)):
+                # Get the prototype identity for the current characteristic
                 prototype_char_identity = model.prototype_class_identity[characteristic_idx].to(device)
                 
-                # Get the max distance between prototypes
-                max_dist = (model.prototype_shape[1] * model.prototype_shape[2] * model.prototype_shape[3])
+                # Compute cross entropy cost - to encourage the correct classification of the input
+                cross_entropy_cost = CrossEntropy.compute(task_output, target)
                 
-                # Compute cross entropy cost for each characteristic
-                cross_entropy = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char[0])
-                cross_entropy = cross_entropy * (coefs['crs_ent'] if coefs else 1)
+                # Compute cluster cost - to encourage similarity among prototypes of the same class
+                cluster_cost = Cluster.compute(similarity, target)
                 
-                # Compute cluster cost for each characteristic
-                prototypes_of_correct_class = torch.t(prototype_char_identity[:,target]).to(device)    # batch_size * num_prototypes
-                inverted_distances, _ = torch.max((max_dist - min_distance) * prototypes_of_correct_class, dim=1)
-                cluster_cost = torch.mean((max_dist - inverted_distances) * bweight_char[range(bweight_char.size(0)), target]) # Increase the distance between the prototypes of the same class
-                cluster_cost = cluster_cost * (coefs['clst'] if coefs else 1)
+                # Compute separation cost - to encourage diversity among prototypes of different classes
+                separation_cost = Separation.compute(similarity, target)
                 
-                # Compute separation cost for each characteristic
-                prototypes_of_wrong_class = 1 - prototypes_of_correct_class
-                inverted_distances_to_nontarget_prototypes, _ = torch.max((max_dist - min_distance) * prototypes_of_wrong_class, dim=1)
-                separation_cost = torch.mean((max_dist - inverted_distances_to_nontarget_prototypes) * bweight_char[range(bweight_char.size(0)), 1 - target]) # Decrease the distance between the prototypes of different classes
-                separation_cost = separation_cost * (coefs['sep'] if coefs else 1)
+                # TODO: Compute Orthogonality loss - to encourage diversity among prototypes
                 
-                # Compute l1 regularization for each characteristic
-                if use_l1_mask:
-                    l1_mask = 1 - torch.t(prototype_char_identity).to(device)
-                    l1 = (model.task_specific_classifier[characteristic_idx].weight * l1_mask).norm(p=1)
-                else:
-                    l1 = model.task_specific_classifier[characteristic_idx].weight.norm(p=1) 
-                l1 = l1 * (coefs['l1'] if coefs else 1)
+                # Compute l1 regularization on task-specific classifier weights - to encourage sparsity in the weights
+                l1_mask= 1 - torch.t(prototype_char_identity).to(device)
+                l1 = L_norm(loss_weight=coefs['l1'], mask=l1_mask, p=1).compute(model.task_specific_classifier[characteristic_idx].weight)
+                
+                # Compute Occurance Map Transformation Regularization - to encourage the occurance map to be generalize better
+                occ_trans_cost = Transform.compute(X, occurrence_map, model, characteristic_idx)
+                
+                # Compute Occurance Map L1 Regularization - to make the occruance map as small as possible to avoid covering more regions than necessary
+                occ_l1 = L1_occ.compute(occurrence_map, dim=(-2, -1))
+                
+                occurance_map_cost = occ_trans_cost + occ_l1
                 
                 # Update the different task losses for each characteristic
-                task_cross_entropy[characteristic_idx] += cross_entropy.item()
+                task_cross_entropy[characteristic_idx] += cross_entropy_cost.item()
                 task_cluster_cost[characteristic_idx] += cluster_cost.item()
                 task_separation_cost[characteristic_idx] += separation_cost.item()
                 task_l1[characteristic_idx] += l1.item()
+                task_occ_cost[characteristic_idx] += occurance_map_cost.item()
                 
                 # Collect the different losses for each characteristic
                 task_loss = (
-                    cross_entropy 
+                    cross_entropy_cost 
                     + cluster_cost 
                     + separation_cost 
                     + l1
+                    + occurance_map_cost
                 )
                 
                 # Update the task total losses
@@ -155,12 +172,13 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
     task_cluster_cost = [t / n_batches for t in task_cluster_cost]
     task_separation_cost = [t / n_batches for t in task_separation_cost]
     task_l1 = [t / n_batches for t in task_l1]
+    task_occ_cost = [t / n_batches for t in task_occ_cost]
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(task_targets_all, task_predictions_all)]
     
     final_loss = final_total_loss / n_batches
     final_balanced_accuracy = balanced_accuracy_score(final_targets_all, final_predictions_all)
     final_f1 = f1_score(final_targets_all, final_predictions_all)
-    # final_precision = precision_score(final_targets_all, final_predictions_all)
+    final_precision = precision_score(final_targets_all, final_predictions_all)
     final_recall = recall_score(final_targets_all, final_predictions_all)
     final_auc = roc_auc_score(final_targets_all, final_predictions_all)
 
@@ -172,10 +190,11 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
                'task_cluster_cost': task_cluster_cost,
                'task_separation_cost': task_separation_cost,
                'task_l1': task_l1,
+               'task_occ_cost': task_occ_cost,
                'final_loss': final_loss,
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
-               # 'final_precision': final_precision,
+               'final_precision': final_precision,
                'final_recall': final_recall,
                'final_auc': final_auc
             }
@@ -186,26 +205,28 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
     else:
         return metrics
 
-def train_ppnet(model, data_loader, optimizer, device, use_l1_mask=True, coefs=None, task_weights=None):
+
+def train_xpnet(model, data_loader, optimizer, device, use_l1_mask=True, coefs=None, task_weights=None):
     train_metrics, task_weights = _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_mask=use_l1_mask, coefs=coefs, task_weights=task_weights)
     print("\nFinal Train Metrics:")
     print(f"Total Loss: {train_metrics['average_loss']:.5f}")
-    for i, (bal_acc, task_loss, task_ce, task_cc, task_sc) in enumerate(zip(train_metrics['task_balanced_accuracies'], train_metrics['task_losses'], train_metrics['task_cross_entropy'], train_metrics['task_cluster_cost'], train_metrics['task_separation_cost']), 1):
-        print(f"Characteristic {i}      - Task Loss: {task_loss:.2f}, Cross Entropy: {task_ce:.2f}, Cluster Cost: {task_cc:.2f}, Separation Cost: {task_sc:.2f}, Balanced Accuracy: {bal_acc*100:.2f}%")
+    for i, (bal_acc, task_loss, task_ce, task_cc, task_sc, task_occ) in enumerate(zip(train_metrics['task_balanced_accuracies'], train_metrics['task_losses'], train_metrics['task_cross_entropy'], train_metrics['task_cluster_cost'], train_metrics['task_separation_cost'], train_metrics['task_occ_cost']), 1):
+        print(f"Characteristic {i}      - Task Loss: {task_loss:.2f}, Cross Entropy: {task_ce:.2f}, Cluster Cost: {task_cc:.2f}, Separation Cost: {task_sc:.2f}, Occurance Map Cost: {task_occ:.2f}, Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Malignancy Prediction - Binary Cross Entropy Loss: {train_metrics['final_loss']:.2f}, Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, F1 Score: {train_metrics['final_f1']*100:.2f}%")
     return train_metrics, task_weights
 
-def test_ppnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_weights=None):
+def test_xpnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_weights=None):
     test_metrics = _train_or_test(model, data_loader, None, device, is_train=False, use_l1_mask=use_l1_mask, coefs=coefs, task_weights=task_weights)
     print("\nFinal Test Metrics:")
     print(f"Total Loss: {test_metrics['average_loss']:.5f}")
-    for i, (bal_acc, task_loss, task_ce, task_cc, task_sc) in enumerate(zip(test_metrics['task_balanced_accuracies'], test_metrics['task_losses'], test_metrics['task_cross_entropy'], test_metrics['task_cluster_cost'], test_metrics['task_separation_cost']), 1):
-        print(f"Characteristic {i}      - Task Loss: {task_loss:.2f}, Cross Entropy: {task_ce:.2f}, Cluster Cost: {task_cc:.2f}, Separation Cost: {task_sc:.2f}, Balanced Accuracy: {bal_acc*100:.2f}%")
+    for i, (bal_acc, task_loss, task_ce, task_cc, task_sc, task_occ) in enumerate(zip(test_metrics['task_balanced_accuracies'], test_metrics['task_losses'], test_metrics['task_cross_entropy'], test_metrics['task_cluster_cost'], test_metrics['task_separation_cost'], test_metrics['task_occ_cost']), 1):
+        print(f"Characteristic {i}      - Task Loss: {task_loss:.2f}, Cross Entropy: {task_ce:.2f}, Cluster Cost: {task_cc:.2f}, Separation Cost: {task_sc:.2f}, Occurance Map Cost: {task_occ:.2f}, Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Malignancy Prediction - Binary Cross Entropy Loss: {test_metrics['final_loss']:.2f}, Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1 Score: {test_metrics['final_f1']*100:.2f}%")
     return test_metrics
-            
+
+
 def last_only(model):
     for p in model.features.parameters():
         p.requires_grad = False

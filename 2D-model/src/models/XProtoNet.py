@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from src.utils.receptive_field import compute_proto_layer_rf_info_v2
-from src.models.ProtoPNet import PPNet, base_architecture_to_features
+from src.models.ProtoPNet import PPNet, BACKBONE_DICT
 
 
 class XProtoNet(PPNet):
@@ -11,39 +11,73 @@ class XProtoNet(PPNet):
 
         self.cnn_backbone = self.features
         del self.features
-        cnn_backbone_out_channels = self.get_cnn_backbone_out_channels(self.cnn_backbone)
+        cnn_backbone_out_channels = self.cnn_backbone.get_output_channels()
 
         # feature extractor module
-        self.add_on_layers = torch.nn.Sequential(*list(self.add_on_layers.children())[:-1])
-        self._initialize_weights(self.add_on_layers)
+        # self.add_on_layers = torch.nn.Sequential(*list(self.add_on_layers.children())[:-1])
+        self.add_on_layers_module = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(in_channels=cnn_backbone_out_channels, out_channels=self.prototype_shape[1], kernel_size=1),
+                nn.BatchNorm2d(self.prototype_shape[1]),
+                nn.ReLU(),
+                nn.Dropout(0.2),
+                nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
+                nn.Sigmoid()
+            ) for _ in range(self.num_characteristics)
+        ])
+        # self._initialize_weights(self.add_on_layers)
 
         # Occurrence map module
-        self.occurrence_module = nn.Sequential(
-            nn.Conv2d(
-                in_channels=cnn_backbone_out_channels,
-                out_channels=self.prototype_shape[1],
-                kernel_size=1,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=self.prototype_shape[1],
-                out_channels=self.prototype_shape[1] // 2,
-                kernel_size=1,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=self.prototype_shape[1] // 2,
-                out_channels=self.prototype_shape[0],
-                kernel_size=1,
-                bias=False,
-            ),
-            # nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[0], kernel_size=1, bias=False),
-        )
-        self._initialize_weights(self.occurrence_module)
+        self.occurrence_module = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(
+                    in_channels=cnn_backbone_out_channels,
+                    out_channels=self.prototype_shape[1],
+                    kernel_size=1,
+                ),
+                nn.ReLU(),
+                nn.Conv2d(
+                    in_channels=self.prototype_shape[1],
+                    out_channels=self.prototype_shape[1] // 2,
+                    kernel_size=1,
+                ),
+                nn.ReLU(),
+                nn.Conv2d(
+                    in_channels=self.prototype_shape[1] // 2,
+                    out_channels=self.prototypes_per_characteristic,
+                    kernel_size=1,
+                    bias=False,
+                ),
+                # nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[0], kernel_size=1, bias=False),
+            ) for _ in range(self.num_characteristics)
+        ])
+        # self._initialize_weights(self.occurrence_module)
 
         # Last classification layer, redefine to initialize randomly
-        self.last_layer = nn.Linear(self.num_prototypes, self.num_classes, bias=False)  # do not use bias
-        self.set_last_layer_incorrect_connection(incorrect_strength=0)
+        self.task_specific_classifier = nn.ModuleList([
+            nn.Linear(self.prototypes_per_characteristic, self.num_classes, bias=False) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
+        ])
+        
+        self.final_add_on_layers = nn.Sequential(
+            nn.Conv2d(in_channels=cnn_backbone_out_channels, out_channels=self.prototype_shape[1], kernel_size=1),
+            nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototypes_per_characteristic*self.num_characteristics, kernel_size=1),
+            nn.BatchNorm2d(self.prototypes_per_characteristic*self.num_characteristics),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.AdaptiveAvgPool2d(1)
+        )
+        
+        self.final_classifier = nn.Sequential(
+            # nn.flatten(),
+            nn.Linear(2*self.prototypes_per_characteristic*self.num_characteristics, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(256, 1)
+        )
+            
+        
+        self._set_last_layer_incorrect_connection(incorrect_strength=0)
 
         self.om_softmax = nn.Softmax(dim=-1)
         self.cosine_similarity = nn.CosineSimilarity(dim=2)
@@ -51,94 +85,105 @@ class XProtoNet(PPNet):
     def forward(self, x):
         # Feature Extractor Layer
         x = self.cnn_backbone(x)
-        feature_map = self.add_on_layers(x).unsqueeze(1)  # shape (N, 1, 128, H, W)
-        occurrence_map = self.get_occurence_map_absolute_val(x)  # shape (N, P, 1, H, W)
-        features_extracted = (occurrence_map * feature_map).sum(dim=3).sum(dim=3)  # shape (N, P, 128)
+        
+        # Hierarchical Prototype Layer
+        task_logits = []
+        similarities = []
+        occurrence_maps = []
+        for i in range(self.num_characteristics):
+            feature_map = self.add_on_layers_module[i](x).unsqueeze(1)  # shape (N, 1, 128, H, W)
+            
+            occurrence_map = self.get_occurence_map_absolute_val(x, i)  # shape (N, P, 1, H, W)
+            
+            features_extracted = (occurrence_map * feature_map).sum(dim=3).sum(dim=3)  # shape (N, P, 128)
+            
+            similarity = self.cosine_similarity(
+                features_extracted, self.prototype_vectors[i].squeeze().unsqueeze(0)
+            )  # shape (N, P)
+            similarity = (similarity + 1) / 2.0  # normalizing to [0,1] for positive reasoning
 
-        # Prototype Layer
-        similarity = self.cosine_similarity(
-            features_extracted, self.prototype_vectors.squeeze().unsqueeze(0)
-        )  # shape (N, P)
-        similarity = (similarity + 1) / 2.0  # normalizing to [0,1] for positive reasoning
+            # classification layer
+            task_logit = self.task_specific_classifier[i](similarity)
+            
+            occurrence_maps.append(occurrence_map)
+            similarities.append(similarity)
+            task_logits.append(task_logit)
+        
+        # Prepare similarity vector
+        similarity_vector = torch.cat(similarities, dim=1)
 
-        # classification layer
-        logits = self.last_layer(similarity)
+        # Process through final add-on layers
+        final_layer_feature_map = self.final_add_on_layers(x).squeeze()
 
-        return logits, similarity, occurrence_map
+        # Concatenate all features
+        final_layer_input = torch.cat((similarity_vector, final_layer_feature_map), dim=1)
+        
+        # Final Classification Layer
+        final_output = torch.sigmoid(self.final_classifier(final_layer_input))
 
-    def compute_occurence_map(self, x):
+        return final_output, task_logits, similarities, occurrence_maps
+
+    def compute_occurence_map(self, x, characteristic_index):
         # Feature Extractor Layer
         x = self.cnn_backbone(x)
-        occurrence_map = self.get_occurence_map_absolute_val(x)  # shape (N, P, 1, H, W)
+        occurrence_map = self.get_occurence_map_absolute_val(x, characteristic_index)  # shape (N, P, 1, H, W)
         return occurrence_map
 
-    def get_occurence_map_softmaxed(self, x):
-        occurrence_map = self.occurrence_module(x)  # shape (N, P, H, W)
+    def get_occurence_map_softmaxed(self, x, characteristic_index):
+        occurrence_map = self.occurrence_module[characteristic_index](x)  # shape (N, P, H, W)
         n, p, h, w = occurrence_map.shape
         occurrence_map = occurrence_map.reshape((n, p, -1))
         occurrence_map = self.om_softmax(occurrence_map).reshape((n, p, h, w)).unsqueeze(2)  # shape (N, P, 1, H, W)
         return occurrence_map
 
-    def get_occurence_map_absolute_val(self, x):
-        occurrence_map = self.occurrence_module(x)  # shape (N, P, H, W)
+    def get_occurence_map_absolute_val(self, x, characteristic_index):
+        occurrence_map = self.occurrence_module[characteristic_index](x)  # shape (N, P, H, W)
         occurrence_map = torch.abs(occurrence_map).unsqueeze(2)  # shape (N, P, 1, H, W)
         return occurrence_map
-
+    
     def push_forward(self, x):
         """
         this method is needed for the pushing operation
         """
         # Feature Extractor Layer
         x = self.cnn_backbone(x)
-        feature_map = self.add_on_layers(x).unsqueeze(1)  # shape (N, 1, 128, H, W)
-        occurrence_map = self.get_occurence_map_absolute_val(x)  # shape (N, P, 1, H, W)
-        features_extracted = (occurrence_map * feature_map).sum(dim=3).sum(dim=3)  # shape (N, P, 128)
+        
+        features_extracted_list = []
+        similarity_list = []
+        occurrence_map_list = []
+        logits_list = []
+        for characteristic_index in range(self.num_characteristics):
+            feature_map = self.add_on_layers_module[characteristic_index](x).unsqueeze(1)  # shape (N, 1, 128, H, W)
+            occurrence_map = self.get_occurence_map_absolute_val(x,characteristic_index)  # shape (N, P, 1, H, W)
+            features_extracted = (occurrence_map * feature_map).sum(dim=3).sum(dim=3)  # shape (N, P, 128)
 
-        # Prototype Layer
-        similarity = self.cosine_similarity(
-            features_extracted, self.prototype_vectors.squeeze().unsqueeze(0)
-        )  # shape (N, P)
-        similarity = (similarity + 1) / 2.0  # normalizing to [0,1] for positive reasoning
+            # Prototype Layer
+            similarity = self.cosine_similarity(
+                features_extracted, self.prototype_vectors[characteristic_index].squeeze().unsqueeze(0)
+            )  # shape (N, P)
+            similarity = (similarity + 1) / 2.0  # normalizing to [0,1] for positive reasoning
 
-        # classification layer
-        logits = self.last_layer(similarity)
+            # classification layer
+            logits = self.task_specific_classifier[characteristic_index](similarity)
+            
+            features_extracted_list.append(features_extracted)
+            similarity_list.append(similarity)
+            occurrence_map_list.append(occurrence_map)
+            logits_list.append(logits)
 
-        return features_extracted, 1 - similarity, occurrence_map, logits
-
-    def __repr__(self):
-        # XProtoNet(self, backbone, img_size, prototype_shape,
-        # proto_layer_rf_info, num_classes, init_weights=True):
-        rep = (
-            "PPNet(\n"
-            "\tcnn_backbone: {},\n"
-            "\timg_size: {},\n"
-            "\tprototype_shape: {},\n"
-            "\tproto_layer_rf_info: {},\n"
-            "\tnum_classes: {},\n"
-            "\tepsilon: {}\n"
-            ")"
-        )
-
-        return rep.format(
-            self.cnn_backbone,
-            self.img_size,
-            self.prototype_shape,
-            self.proto_layer_rf_info,
-            self.num_classes,
-            self.epsilon,
-        )
-
-
-def construct_XProtoNet(
+        # return features_extracted, 1 - similarity, occurrence_map, logits
+        return features_extracted_list, 1 - similarity_list, occurrence_map_list, logits_list
+    
+def construct_XPNet(
     base_architecture,
-    pretrained=True,
-    img_size=224,
-    prototype_shape=(2000, 512, 1, 1),
-    num_classes=200,
+    weights='DEFAULT',
+    img_size=100,
+    prototype_shape=(10*4*2, 128, 1, 1),
+    num_characteristics=4,
     prototype_activation_function="log",
-    add_on_layers_type="bottleneck",
+    add_on_layers_type="regular",
 ):
-    features = base_architecture_to_features[base_architecture](pretrained=pretrained)
+    features = BACKBONE_DICT[base_architecture](weights=weights)
     layer_filter_sizes, layer_strides, layer_paddings = features.conv_info()
     proto_layer_rf_info = compute_proto_layer_rf_info_v2(
         img_size=img_size,
@@ -152,7 +197,7 @@ def construct_XProtoNet(
         img_size=img_size,
         prototype_shape=prototype_shape,
         proto_layer_rf_info=proto_layer_rf_info,
-        num_classes=num_classes,
+        num_characteristics=num_characteristics,
         init_weights=True,
         prototype_activation_function=prototype_activation_function,
         add_on_layers_type=add_on_layers_type,

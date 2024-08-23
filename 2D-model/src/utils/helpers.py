@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
+import pickle
 
 # Function to save metrics to a CSV file
 def save_metrics_to_csv(all_train_metrics, all_test_metrics, csv_path):
@@ -80,7 +81,8 @@ def setup_directories(base_path, experiment_model, experiment_backbone, experime
         'plots': os.path.join(base_path, experiment_model, experiment_backbone, experiment_run, 'plots'),
         'weights': os.path.join(base_path, experiment_model, experiment_backbone, experiment_run, 'weights'),
         'metrics': os.path.join(base_path, experiment_model, experiment_backbone, experiment_run),
-        'scripts': os.path.join(base_path, experiment_model, experiment_backbone, experiment_run)
+        'scripts': os.path.join(base_path, experiment_model, experiment_backbone, experiment_run),
+        'prototypes': os.path.join(base_path, experiment_model, experiment_backbone, experiment_run, 'prototypes')
     }
     for path in paths.values():
         os.makedirs(path, exist_ok=True)
@@ -128,3 +130,53 @@ def find_high_activation_crop(activation_map, percentile=95):
             break
     return lower_y, upper_y+1, lower_x, upper_x+1
 
+######## Pickle loading and saving
+def load_pickle(pickle_path, log=print):
+    with open(pickle_path, "rb") as handle:
+        pickle_data = pickle.load(handle)
+        log(f"data successfully loaded from {pickle_path}")
+    return pickle_data
+
+
+def save_pickle(pickle_data, pickle_path, log=print):
+    with open(pickle_path, "wb") as handle:
+        pickle.dump(pickle_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        log(f"data successfully saved in {pickle_path}")
+
+import torch
+
+mean = (0.5, 0.5, 0.5)
+std = (0.5, 0.5, 0.5)
+
+def preprocess(x, mean, std):
+    """
+    Preprocesses the input tensor by normalizing it using mean and standard deviation.
+
+    Args:
+        x (torch.Tensor): Input tensor of shape (batch_size, channels, height, width).
+        mean (list): List of mean values for each channel.
+        std (list): List of standard deviation values for each channel.
+
+    Returns:
+        torch.Tensor: Preprocessed tensor of the same shape as the input tensor.
+    """
+    assert x.size(1) == 3
+    y = torch.zeros_like(x)
+    for i in range(3):
+        y[:, i, :, :] = (x[:, i, :, :] - mean[i]) / std[i]
+    return y
+
+
+def preprocess_input_function(x):
+    '''
+    Allocate a new tensor like x and apply the normalization used in the
+    pretrained model.
+
+    Parameters:
+        x (Tensor): Input tensor to be preprocessed.
+
+    Returns:
+        Tensor: Preprocessed tensor.
+
+    '''
+    return preprocess(x, mean=mean, std=std)
