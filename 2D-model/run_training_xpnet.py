@@ -27,8 +27,8 @@ MODEL_DICT = {
 # TODO: Add number of prototypes as a parameter, prototype size, and more 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='efficientFPN_v2_s', help='Feature Extractor Backbone to use')
-    parser.add_argument('--model', type=str, default='ppnet', help='Model to train')
+    parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--model', type=str, default='xpnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     
