@@ -11,8 +11,10 @@ class XProtoNet(PPNet):
 
         # self.cnn_backbone = self.features
         # del self.features
-        cnn_backbone_out_channels = self.cnn_backbone.get_output_channels()
+        # cnn_backbone_out_channels = self.cnn_backbone.get_output_channels()
 
+        cnn_backbone_out_channels = self.features.get_output_channels()
+        
         # feature extractor module
         # self.add_on_layers = torch.nn.Sequential(*list(self.add_on_layers.children())[:-1])
         self.add_on_layers_module = nn.ModuleList([
