@@ -9,8 +9,8 @@ class XProtoNet(PPNet):
     def __init__(self, **kwargs):
         super(XProtoNet, self).__init__(**kwargs)
 
-        self.cnn_backbone = self.features
-        del self.features
+        # self.cnn_backbone = self.features
+        # del self.features
         cnn_backbone_out_channels = self.cnn_backbone.get_output_channels()
 
         # feature extractor module
@@ -84,7 +84,7 @@ class XProtoNet(PPNet):
 
     def forward(self, x):
         # Feature Extractor Layer
-        x = self.cnn_backbone(x)
+        x = self.features(x)
         
         # Hierarchical Prototype Layer
         task_logits = []
@@ -125,7 +125,7 @@ class XProtoNet(PPNet):
 
     def compute_occurence_map(self, x, characteristic_index):
         # Feature Extractor Layer
-        x = self.cnn_backbone(x)
+        x = self.features(x)
         occurrence_map = self.get_occurence_map_absolute_val(x, characteristic_index)  # shape (N, P, 1, H, W)
         return occurrence_map
 
@@ -146,7 +146,7 @@ class XProtoNet(PPNet):
         this method is needed for the pushing operation
         """
         # Feature Extractor Layer
-        x = self.cnn_backbone(x)
+        x = self.features(x)
         
         features_extracted_list = []
         similarity_list = []
