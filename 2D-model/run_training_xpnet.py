@@ -66,7 +66,7 @@ def main():
     print("#"*100 + "\n\n")
     
     device = select_device_with_most_memory()
-    print(f"Using device: {device}")
+    print(f"\nUsing device: {device}")
 
     ###############################################################################################################
     #################################### Initialize the data loaders ##############################################
@@ -170,7 +170,7 @@ def main():
     [{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
-    {'params': model.occurance_module.parameters(), 'lr': warm_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
+    {'params': model.occurrence_module.parameters(), 'lr': warm_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
     {'params': model.final_add_on_layers.parameters(), 'lr': warm_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
@@ -179,7 +179,7 @@ def main():
     joint_optimizer_specs = \
     [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers_module.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
-    {'params': model.occurance_module.parameters(), 'lr': joint_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
+    {'params': model.occurrence_module.parameters(), 'lr': joint_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
     {'params': model.final_add_on_layers.parameters(), 'lr': joint_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
