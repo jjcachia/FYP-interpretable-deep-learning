@@ -65,7 +65,8 @@ def main():
     # Check if CUDA is available
     print("#"*100 + "\n\n")
     
-    device = select_device_with_most_memory()
+    # device = select_device_with_most_memory()
+    device = torch.device('cuda:4') 
     print(f"\nUsing device: {device}")
 
     ###############################################################################################################
