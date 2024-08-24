@@ -180,3 +180,25 @@ def preprocess_input_function(x):
 
     '''
     return preprocess(x, mean=mean, std=std)
+
+def select_device_with_most_memory():
+    if torch.cuda.is_available():
+        max_memory = 0
+        device_id = 0
+        print("CUDA is available. Listing GPU devices and selecting the one with the most available memory:")
+        for i in range(torch.cuda.device_count()):
+            gpu_properties = torch.cuda.get_device_properties(i)
+            free_memory = gpu_properties.total_memory - torch.cuda.memory_reserved(i)
+            print(f"Device {i}: {torch.cuda.get_device_name(i)}, Free Memory: {free_memory} bytes")
+            
+            if free_memory > max_memory:
+                max_memory = free_memory
+                device_id = i
+
+        selected_device = torch.device(f'cuda:{device_id}')
+        print(f"Selected Device {device_id}: {torch.cuda.get_device_name(device_id)} with the most available memory.")
+    else:
+        print("CUDA is not available. Falling back to CPU.")
+        selected_device = torch.device('cpu')
+    
+    return selected_device

@@ -79,7 +79,7 @@ class XProtoNet(PPNet):
         )
             
         
-        self._set_last_layer_incorrect_connection(incorrect_strength=0)
+        self._set_last_layer_incorrect_connection(incorrect_strength=-0.5)
 
         self.om_softmax = nn.Softmax(dim=-1)
         self.cosine_similarity = nn.CosineSimilarity(dim=2)

@@ -2,7 +2,7 @@ import os, time, gc, argparse, shutil
 from PIL import Image
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
-from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories
+from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, select_device_with_most_memory
 from src.loaders.dataloaderv2 import LIDCDataset
 import src.training.train_xpnet as tnt
 from src.models.XProtoNet import construct_XPNet
@@ -14,7 +14,7 @@ DEFAULT_IMG_SIZE = 100
 
 DEFAULT_CHARS = [False, False, False, True, True, False, False, True, True]
 DEFAULT_NUM_CHARS = sum(DEFAULT_CHARS)
-DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 128, 1, 1)
+DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 256, 1, 1)
 
 DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
@@ -64,15 +64,8 @@ def main():
     
     # Check if CUDA is available
     print("#"*100 + "\n\n")
-    if torch.cuda.is_available():
-        print("CUDA is available. GPU devices:")
-        # Loop through all available GPUs
-        for i in range(torch.cuda.device_count()):
-            print(f"Device {i}: {torch.cuda.get_device_name(i)}")
-    else:
-        print("CUDA is not available. Only CPU is available.")
     
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = select_device_with_most_memory()
     print(f"Using device: {device}")
 
     ###############################################################################################################
@@ -85,20 +78,12 @@ def main():
 
     mean = (0.5, 0.5, 0.5)
     std = (0.5, 0.5, 0.5)
-    preprocess = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3), 
-        transforms.Resize(256),  # First resize to larger dimensions
-        transforms.CenterCrop(224),  # Then crop to 224x224
-        transforms.ToTensor(),  # Convert to tensor (also scales pixel values to [0, 1])
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
 
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
                                                             transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
                                                                         transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
                                                                         transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
                                                                         transforms.Normalize(mean, std)
                                                                         ]),
                                                             train=True)
@@ -109,7 +94,6 @@ def main():
                                                             transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
                                                                         transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
                                                                         transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
                                                                         transforms.Normalize(mean, std)
                                                                         ]), train=True, push=True)
     push_dataloader = torch.utils.data.DataLoader(LIDC_pushset, batch_size=args.batch_size, shuffle=True, num_workers=4)
@@ -119,7 +103,6 @@ def main():
                                                             transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
                                                                         transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
                                                                         transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
                                                                         transforms.Normalize(mean, std)
                                                                         ]),
                                                             train=False)
@@ -131,7 +114,7 @@ def main():
     print(f"Number of Characteristics: {len(batch_images[1])}")
 
     ###############################################################################################################
-    ##################################### Initialize the model and optimizer ######################################
+    ############################################# Initialize the model ############################################
     ###############################################################################################################
     print("\n\n" + "#"*100 + "\n\n")
     
@@ -158,31 +141,52 @@ def main():
     total_params = sum(p.numel() for p in model.parameters())
     print("Total number of parameters: ", total_params)
     
-    # Define the optimizers and learning rate schedulers
-    joint_optimizer_lrs = {'features': 1e-4,
-                        'add_on_layers': 1e-3,
-                        'prototype_vectors': 1e-3}
-    warm_optimizer_lrs = {'add_on_layers': 1e-3,
-                        'prototype_vectors': 1e-3}
-    last_layer_optimizer_lr = 1e-4 # 5e-4
+    ###############################################################################################################
+    ############################################ Initialize the optimizers ########################################
+    ###############################################################################################################
     
-    joint_optimizer_specs = \
-    [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
-    {'params': model.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
-    {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
-    ]
-    joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
-
+    joint_optimizer_lrs = {
+        'features': 1e-4,
+        'add_on_layers': 1e-4,
+        'occurrence': 1e-4,
+        'prototype_vectors': 1e-4,
+        'final_add_on_layers': 1e-4
+    }
+    
+    warm_optimizer_lrs = {
+        'add_on_layers': 1e-4,
+        'prototype_vectors': 1e-4,
+        'occurrence': 1e-4,
+        'prototype_vectors': 1e-4,
+        'final_add_on_layers': 1e-4
+    }
+    
+    last_layer_optimizer_lr = {
+        'task_specific_classifier': 1e-4,
+        'final_classifier': 1e-4
+    }
+    
     warm_optimizer_specs = \
     [{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    {'params': model.occurance_module.parameters(), 'lr': warm_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
+    {'params': model.final_add_on_layers.parameters(), 'lr': warm_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
+    
+    joint_optimizer_specs = \
+    [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3},
+    {'params': model.add_on_layers_module.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    {'params': model.occurance_module.parameters(), 'lr': joint_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
+    {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
+    {'params': model.final_add_on_layers.parameters(), 'lr': joint_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
+    ]
+    joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
-    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr},
-                                 {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr}]
+    last_layer_optimizer_specs = [{'params': model.task_specific_classifier.parameters(), 'lr': last_layer_optimizer_lr['task_specific_classifier']},
+                                 {'params': model.final_classifier.parameters(), 'lr': last_layer_optimizer_lr['final_classifier']}]
     last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
     
 
