@@ -14,9 +14,9 @@ DEFAULT_IMG_SIZE = 100
 
 DEFAULT_CHARS = [False, False, False, True, True, False, False, True, True]
 DEFAULT_NUM_CHARS = sum(DEFAULT_CHARS)
-DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 128, 1, 1)
+DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 256, 1, 1)
 
-DEFAULT_BATCH_SIZE = 100
+DEFAULT_BATCH_SIZE = 10
 DEFAULT_EPOCHS = 100
 DEFAULT_LEARNING_RATE = 0.0001
 
@@ -147,7 +147,7 @@ def main():
     ###############################################################################################################
     
     joint_optimizer_lrs = {
-        'features': 1e-4,
+        'features': 5e-5,
         'add_on_layers': 1e-4,
         'occurrence': 1e-4,
         'prototype_vectors': 1e-4,
@@ -200,7 +200,7 @@ def main():
     epochs = args.epochs
     num_warm_epochs = 10
     push_start = 10
-    push_epochs = [i for i in range(epochs) if i % push_start == 0]
+    push_epochs = [i for i in range(epochs) if i > push_start and i % 5 == 0]
     
     prototype_activation_function = 'log'
     
@@ -282,7 +282,7 @@ def main():
             
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=model)
-                for i in range(10):
+                for i in range(5):
                     _, task_weights = tnt.train_xpnet(data_loader=train_dataloader, 
                                                       model=model, 
                                                       optimizer=last_layer_optimizer,
