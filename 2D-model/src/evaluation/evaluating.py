@@ -72,7 +72,10 @@ def evaluate_model(model, data_loader, device):
     
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
-            slices = slices.to(device).squeeze(1)
+            slices = slices.to(device)
+            print(slices.shape)
+            slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))
+            print(slices.shape)
             
             predictions = model(slices)
 
