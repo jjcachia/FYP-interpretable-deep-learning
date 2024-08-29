@@ -102,7 +102,8 @@ def evaluate_model(model, data_loader, device):
             
             print(median_prediction)
             print(labels)
-            labels = labels.view(-1)
+            if labels.ndim > 1 and labels.shape[1] == 1:  # If labels is a single column
+                labels = labels.view(-1)
             print(labels.shape, median_prediction.shape)
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
@@ -113,11 +114,11 @@ def evaluate_model(model, data_loader, device):
     precision = precision_score(final_pred_targets, final_pred_outputs)
     recall = recall_score(final_pred_targets, final_pred_outputs)
     auc = roc_auc_score(final_pred_targets, final_pred_outputs)
-    
+    print(balanced_accuracy, f1, precision, recall, auc)
     # calculate confusion matrix
     confusion_matrix = np.zeros((2, 2), dtype=int)
-    for i, l in enumerate(final_pred_targets):
-        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
+    # for i, l in enumerate(final_pred_targets):
+    #     confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
     
     metrics = {'final_balanced_accuracy': balanced_accuracy,
                'final_f1': f1,
