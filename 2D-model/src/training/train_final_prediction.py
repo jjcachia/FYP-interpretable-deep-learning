@@ -83,7 +83,7 @@ def evaluate_model(data_loader, model, device):
     model.eval()  # Set the model to evaluation mode
     final_pred_targets = []
     final_pred_outputs = []
-    confusion_matrix = np.zeros((2, 2), dtype=np.int)
+    confusion_matrix = np.zeros((2, 2), dtype=int)
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
         for X, _, _, y, bweight_pred in tqdm(data_loader, leave=False):
             images = X.to(device)
