@@ -1,7 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch
-from torchvision import transforms
 from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
@@ -73,7 +72,7 @@ def evaluate_model(model, data_loader, device):
     
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
-            slices = slices.to(device)
+            slices = slices.to(device).squeeze(1)
             
             predictions = model(slices)
 
