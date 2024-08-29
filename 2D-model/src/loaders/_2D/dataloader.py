@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 class LIDCDataset(Dataset):
-    def __init__(self, labels_file, transform=None, chosen_chars=None, indeterminate=True, split='train', validation_split=0.10, test_split=0.10):
+    def __init__(self, labels_file, transform=None, chosen_chars=None, indeterminate=True, split='train', validation_split=0.15, test_split=0.15):
         all_labels = pd.read_csv(labels_file)
         self.transform = transform
         self.chosen_chars = chosen_chars

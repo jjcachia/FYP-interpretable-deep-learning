@@ -103,11 +103,11 @@ def evaluate_model(data_loader, model, device):
     recall = recall_score(final_pred_targets, final_pred_outputs)
     auc = roc_auc_score(final_pred_targets, final_pred_outputs)
     
-    metrics = {'final_balanced_accuracy': balanced_accuracy*100,
-               'final_f1': f1*100,
-               'final_precision': precision*100,
-               'final_recall': recall*100,
-               'final_auc': auc*100,
+    metrics = {'final_balanced_accuracy': balanced_accuracy,
+               'final_f1': f1,
+               'final_precision': precision,
+               'final_recall': recall,
+               'final_auc': auc,
             }
     
     return metrics, confusion_matrix
