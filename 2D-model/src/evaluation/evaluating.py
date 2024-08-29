@@ -63,10 +63,10 @@ class LIDCEvaluationDataset(Dataset):
             images = [self.transform(Image.fromarray(img)) for img in images]
         
         # final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
-
-        final_pred_label = nodule_data.iloc[:]['Malignancy'].values
+        final_pred_label = [row['Malignancy'] for _, row in nodule_data.iterrows()]
+        # final_pred_label = nodule_data.iloc[:]['Malignancy'].values
         
-        return torch.stack(images), final_pred_label
+        return torch.stack(images), torch.stack(final_pred_label)
 
 def evaluate_model(model, data_loader, device):
     model.to(device)
