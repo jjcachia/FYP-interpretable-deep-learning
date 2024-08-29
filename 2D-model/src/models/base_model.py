@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from src.models.backbone_models import denseFPN_121, denseFPN_201, efficientFPN_v2_s, efficientDecoder_v2_s
+from src.models.backbone_models import denseNet121, denseNet201, denseFPN_121, denseFPN_201, efficientFPN_v2_s, efficientDecoder_v2_s
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
-    'denseNet121': models.densenet121(weights='DEFAULT').features[:-1],
-    'denseNet201': models.densenet201(weights='DEFAULT').features[:-1],
+    'denseNet121': denseNet121,
+    'denseNet201': denseNet201,
     'efficientNetV2_s': models.efficientnet_v2_s(weights='DEFAULT').features[:-1],
     'denseFPN_121': denseFPN_121,
     'denseFPN_201': denseFPN_201,
@@ -20,13 +20,15 @@ BACKBONE_DICT = {
 ############################################################################################################################################################################
 
 class BaseModel(nn.Module):
-    def __init__(self, backbone, weights, common_channel_size, output_channel_size, output_feature_size, hidden_layers):
+    def __init__(self, backbone, weights, common_channel_size, hidden_layers):
         super(BaseModel, self).__init__()        
-        self.backbone = backbone(weights=weights, common_channel_size=common_channel_size, output_channel_size=output_channel_size, output_feature_size=output_feature_size)
+        self.backbone = backbone(weights=weights, common_channel_size=common_channel_size)
+        
+        cnn_backbone_output_channel_size = self.backbone.get_output_channel_size()
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(output_channel_size*output_feature_size*output_feature_size, hidden_layers),
+            nn.Linear(cnn_backbone_output_channel_size*3*3, hidden_layers),
             nn.BatchNorm1d(hidden_layers),
             nn.ReLU(),
             nn.Dropout(0.1), # 0.2
@@ -43,7 +45,7 @@ class BaseModel(nn.Module):
         return final_output
 
 
-def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_channel_size=256, output_channel_size=256, output_feature_size=12, hidden_layers=1024):
+def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_channel_size=None, hidden_layers=1024):
     """
     Constructs a base model for Malignancy Prediction.
 
@@ -62,5 +64,4 @@ def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_
     if backbone_name not in BACKBONE_DICT:
         raise ValueError(f"Unsupported model name {backbone_name}")
     backbone = BACKBONE_DICT[backbone_name]
-    return BaseModel(backbone=backbone, weights=weights, common_channel_size=common_channel_size, 
-                     output_channel_size=output_channel_size, output_feature_size=output_feature_size, hidden_layers=hidden_layers)
+    return BaseModel(backbone=backbone, weights=weights, common_channel_size=common_channel_size, hidden_layers=hidden_layers)

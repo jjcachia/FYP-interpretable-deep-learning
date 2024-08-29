@@ -1,16 +1,16 @@
 import os, time, gc, argparse, shutil
-from PIL import Image
+import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
-from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories
-from src.loaders.dataloader import LIDCDataset
-from src.training.train_final_prediction import train_step, test_step
+from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks
+from src.loaders._2D.dataloader import LIDCDataset
+from src.training.train_final_prediction import train_step, test_step, evaluate_model
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
-CHOSEN_CHARS = [False, True, False, True, True, False, False, True, True]
+CHOSEN_CHARS = [False, True, False, True, True, False, False, True]
 
 DEFAULT_BATCH_SIZE = 50
 DEFAULT_EPOCHS = 100
@@ -23,7 +23,7 @@ MODEL_DICT = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='base', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
@@ -53,6 +53,7 @@ def main():
     paths = setup_directories(base_path, experiment_model, experiment_backbone, experiment_run)
     best_model_path = os.path.join(paths['weights'], 'best_model.pth')
     metrics_path = os.path.join(paths['metrics'], 'metrics.csv')
+    test_metrics_path = os.path.join(paths['metrics'], 'test_metrics.csv')
     plot_path = os.path.join(paths['plots'], 'loss_plot.png')
 
     # Save the script to the experiment directory
@@ -77,39 +78,19 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
-    labels_file = os.path.join(script_dir, 'dataset', 'Meta', 'meta_info_old.csv')
-    mean = (0.5, 0.5, 0.5)
-    std = (0.5, 0.5, 0.5)
-
-    preprocess = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3), 
-        transforms.Resize(256),  # First resize to larger dimensions
-        transforms.CenterCrop(224),  # Then crop to 224x224
-        transforms.ToTensor(),  # Convert to tensor (also scales pixel values to [0, 1])
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
+    transform = transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()])
     # train set
-    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
-                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]),
-                                                            train=True)
-    train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transform, split='train')
+    train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
+    # validation set
+    LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transform, split='val')
+    val_dataloader = torch.utils.data.DataLoader(LIDC_valset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    
     # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), 
-                                                                        transforms.Resize(size=(IMG_SIZE, IMG_SIZE), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        # transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]), 
-                                                            train=False)
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transform, split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
     batch_images = next(iter(train_dataloader))
 
@@ -143,31 +124,29 @@ def main():
 
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
-    min_test_loss = float('inf')
-    task_weights = [1.0 / 5] * 5
+    min_val_f1 = float('inf')
     for epoch in range(epochs):
         # Print header
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\n" + "-"*100)
         # Train and test the model batch by batch
         epoch_start = time.time()  # Start time of the current epoch
 
         # Training step
-        train_metrics, task_weights = train_step(data_loader=train_dataloader, 
-                                                model=model, 
-                                                optimizer=optimizer,
-                                                device=device,
-                                                task_weights=task_weights)
-        all_train_metrics.append(train_metrics)  # Append training metrics for the epoch
+        train_metrics = train_step(data_loader=train_dataloader, 
+                                    model=model, 
+                                    optimizer=optimizer,
+                                    device=device)
+        all_train_metrics.append(train_metrics)  
         
         # Testing step
-        test_metrics = test_step(data_loader=test_dataloader,
+        test_metrics = test_step(data_loader=val_dataloader,
                                 model=model,
                                 device=device)
-        all_test_metrics.append(test_metrics)  # Append testing metrics for the epoch
+        all_test_metrics.append(test_metrics) 
         
-        # Save the model if the test loss has decreased
-        if test_metrics['average_loss'] < min_test_loss:
-            min_test_loss = test_metrics['average_loss']
+        # Save the model if the val f1 has decreased
+        if test_metrics['final_f1'] < min_val_f1:
+            min_val_f1 = test_metrics['final_f1']
             save_model_in_chunks(model.state_dict(), best_model_path)
 
         epoch_end = time.time()  # End time of the current epoch
@@ -178,6 +157,19 @@ def main():
 
     save_metrics_to_csv(all_train_metrics, all_test_metrics, metrics_path)  # Save metrics to a CSV file
     plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path)  # Plot and save the loss
+    
+    # Evaluate the model on the test set
+    model.load_state_dict(load_model_from_chunks(best_model_path))
+    test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    # Save the test metrics to a CSV file
+    df_test = pd.DataFrame(test_metrics)
+    df_test.to_csv(test_metrics_path)
+    
 
 if __name__ == '__main__':
     main()

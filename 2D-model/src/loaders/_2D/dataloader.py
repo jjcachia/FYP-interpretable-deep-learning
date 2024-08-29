@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 class LIDCDataset(Dataset):
-    def __init__(self, labels_file, transform=None, chosen_chars=None, split='train', validation_split=0.10, test_split=0.10):
+    def __init__(self, labels_file, transform=None, chosen_chars=None, ordinal=True, split='train', validation_split=0.10, test_split=0.10):
         all_labels = pd.read_csv(labels_file)
         self.num_characteristics = len(all_labels.columns) - 2 # Subtract 2 to exclude the image_dir and malignancy columns
         self.transform = transform
@@ -24,7 +24,10 @@ class LIDCDataset(Dataset):
         all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
         all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 1})
         all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 0, 3: 1, 4: 1, 5: 1})
-        all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+        if ordinal:
+            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+        else:
+            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         
         # Extract patient identifiers from the image directory paths
         all_labels['patient_id'] = all_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))))
