@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 import pickle
+import shutil
 
 # Function to save metrics to a CSV file
 def save_metrics_to_csv(all_train_metrics, all_test_metrics, csv_path):
@@ -29,13 +30,17 @@ def plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path):
     plt.close()
 
 # Function to save the model's state dictionary in size-controlled chunks
-def save_model_in_chunks(model_state_dict, save_path, max_size_bytes=50 * 1024 * 1024):
+def save_model_in_chunks(model_state_dict, save_path, max_size_bytes=30 * 1024 * 1024):
     """Saves the model's state dictionary in chunks that do not exceed a specified size in bytes."""
     current_chunk = {}
     current_size = 0
     part = 1
 
-    # Create the directory if it does not exist
+    # Remove the directory if it already exists
+    if os.path.exists(save_path):
+        shutil.rmtree(save_path)
+    
+    # Create the directory anew
     os.makedirs(save_path, exist_ok=True)
 
     for key, tensor in model_state_dict.items():
