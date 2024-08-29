@@ -93,7 +93,7 @@ def evaluate_model(data_loader, model, device):
             final_pred_targets.extend(y.cpu().numpy())
             final_pred_outputs.extend(preds.detach().cpu().numpy())
             
-            for i, l in enumerate(labels.int()):
+            for i, l in enumerate(y.int()):
                 confusion_matrix[l.item(), int(preds[i].item())] += 1
 
 
