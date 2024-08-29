@@ -82,8 +82,6 @@ def evaluate_model(model, data_loader, device):
             # Reshape slices if your model expects a single batch dimension
             if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
                 slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
-
-            print(f"Slices shape: {slices.shape}, of type {slices.dtype}")
             
             predictions = model(slices)
 
@@ -103,10 +101,10 @@ def evaluate_model(model, data_loader, device):
             median_prediction = predictions.round()
             
             print(median_prediction)
-            
+            print(labels)
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
-            final_pred_outputs.append(median_prediction.detach().cpu().numpy())
+            final_pred_outputs.append(median_prediction.cpu().numpy())
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
     f1 = f1_score(final_pred_targets, final_pred_outputs)
