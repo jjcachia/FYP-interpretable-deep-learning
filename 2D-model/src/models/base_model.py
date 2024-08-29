@@ -27,17 +27,16 @@ class BaseModel(nn.Module):
         # cnn_backbone_output_channel_size = self.backbone.get_output_channels()
         out_C, out_H, out_W = self.backbone.get_output_dims()
         
-        # self.add_on_layers = nn.Sequential(
-        #     nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
-        #     nn.BatchNorm2d(512),
-        #     nn.ReLU(),
-        #     nn.Dropout(0.2)
-        # )
-        self.adaptive_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.add_on_layers = nn.Sequential(
+            nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(out_C, hidden_layers),
+            nn.Linear(512*out_H*out_W, hidden_layers),
             nn.BatchNorm1d(hidden_layers),
             nn.ReLU(),
             nn.Dropout(0.2), # 0.2
@@ -48,8 +47,7 @@ class BaseModel(nn.Module):
         # Feature Extraction
         x = self.backbone(x)
         
-        # x = self.add_on_layers(x)
-        x = self.adaptive_pool(x)
+        x = self.add_on_layers(x)
         
         # Final Malignancy Prediction
         final_output = torch.sigmoid(self.final_classifier(x))
@@ -57,7 +55,7 @@ class BaseModel(nn.Module):
         return final_output
 
 
-def construct_baseModel(backbone_name='denseNet_121', weights='DEFAULT', common_channel_size=None, hidden_layers=256):
+def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_channel_size=None, hidden_layers=1024):
     """
     Constructs a base model for Malignancy Prediction.
 
