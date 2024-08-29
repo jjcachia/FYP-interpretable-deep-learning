@@ -84,30 +84,25 @@ def evaluate_model(model, data_loader, device):
                 slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
             
             predictions = model(slices)
-
-            print(predictions.shape)
             
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
                 predictions = predictions.squeeze(1)
             
-            print(predictions.shape)
-            
-            print(predictions)
             # Calculate the median prediction for the nodule
             # median_prediction = predictions.median()
             
-            # print(median_prediction)
-            
             median_prediction = predictions.round()
+            
+            labels = labels.view(-1)
             
             print(median_prediction)
             print(labels)
-            if labels.ndim > 1 and labels.shape[1] == 1:  # If labels is a single column
-                labels = labels.view(-1)
-            print(labels.shape, median_prediction.shape)
+            
+            print(labels.shape, labels.type(), median_prediction.shape, median_prediction.type())
+            
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
-            final_pred_outputs.append(median_prediction.cpu().numpy())
+            final_pred_outputs.append(median_prediction.detach().cpu().numpy())
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
     f1 = f1_score(final_pred_targets, final_pred_outputs)
