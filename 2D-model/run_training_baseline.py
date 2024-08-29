@@ -4,17 +4,18 @@ import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn a
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
 from src.loaders._2D.dataloader import LIDCDataset
-from src.training.train_final_prediction import train_step, test_step, evaluate_model
+from src.training.train_final_prediction import train_step, test_step
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
+from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
 CHOSEN_CHARS = [False, True, False, True, True, False, False, True]
 
-DEFAULT_BATCH_SIZE = 50
+DEFAULT_BATCH_SIZE = 25
 DEFAULT_EPOCHS = 100
-DEFAULT_LEARNING_RATE = 0.0001
+DEFAULT_LEARNING_RATE = 0.00001
 
 MODEL_DICT = {
     'baseline': construct_baselineModel,
@@ -84,7 +85,8 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'slice_labels.csv')
     transform = transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()])
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
@@ -93,10 +95,6 @@ def main():
     # validation set
     LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='val')
     val_dataloader = torch.utils.data.DataLoader(LIDC_valset, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    
-    # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     batch_images = next(iter(train_dataloader))
 
@@ -164,9 +162,18 @@ def main():
     save_metrics_to_csv(all_train_metrics, all_test_metrics, metrics_path)  # Save metrics to a CSV file
     plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path)  # Plot and save the loss
     
+    
+    ###############################################################################################################
+    ####################################### Evaluate the model ####################################################
+    ###############################################################################################################
+    
+    # test set
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
+    
     # Evaluate the model on the test set
     model.load_state_dict(load_model_from_chunks(best_model_path))
-    test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
+    test_metrics, test_confusion_matrix = evaluate_model(model, test_dataloader, device)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
