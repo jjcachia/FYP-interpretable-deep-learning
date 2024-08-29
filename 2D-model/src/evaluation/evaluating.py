@@ -62,8 +62,10 @@ class LIDCEvaluationDataset(Dataset):
         if self.transform:
             images = [self.transform(Image.fromarray(img)) for img in images]
         
-        final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
+        # final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
 
+        final_pred_label = nodule_data.iloc[:]['Malignancy']
+        
         return torch.stack(images), final_pred_label
 
 def evaluate_model(model, data_loader, device):
@@ -94,7 +96,7 @@ def evaluate_model(model, data_loader, device):
             
             print(predictions)
             # Calculate the median prediction for the nodule
-            median_prediction = predictions.median()
+            # median_prediction = predictions.median()
             
             print(median_prediction)
             
