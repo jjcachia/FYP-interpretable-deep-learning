@@ -95,7 +95,7 @@ class LIDCDataset(Dataset):
             bweight_chars.append(bweight_char)
 
         # Extract the final prediction label and binary weight
-        final_pred_label = 1 if (self.labels.iloc[index, 1] > 3) else 0
+        final_pred_label = 1 if (self.labels.iloc[index, 1] > 3) else 0 # TODO: Exclude 3 from positive class
         bweight_fpred = self.bweight_final_pred[final_pred_label]
 
         # Apply Data Augmentation to the image
