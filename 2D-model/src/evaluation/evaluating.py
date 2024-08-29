@@ -78,7 +78,7 @@ def evaluate_model(model, data_loader, device):
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
-            labels = labels.float().to(device)
+            labels = labels.float().to(device).view(-1)
             
             print(labels.shape)
             
@@ -97,9 +97,7 @@ def evaluate_model(model, data_loader, device):
             # median_prediction = predictions.median()
             
             median_prediction = predictions.round()
-            
-            # labels = labels.view(-1)
-            
+                        
             print(median_prediction)
             print(labels)
             
