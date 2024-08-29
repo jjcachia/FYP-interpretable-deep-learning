@@ -100,7 +100,7 @@ def evaluate_model(model, data_loader, device):
             
             print(median_prediction)
             
-            median_prediction = median_prediction.round()
+            median_prediction = predictions.round()
             
             print(median_prediction)
             
