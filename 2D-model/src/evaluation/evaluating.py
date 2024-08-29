@@ -78,6 +78,7 @@ def evaluate_model(model, data_loader, device):
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
+            labels = labels.float().unsqueeze(1).to(device)
             
             # Reshape slices if your model expects a single batch dimension
             if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
@@ -93,7 +94,7 @@ def evaluate_model(model, data_loader, device):
             
             median_prediction = predictions.round()
             
-            labels = labels.view(-1)
+            # labels = labels.view(-1)
             
             print(median_prediction)
             print(labels)
