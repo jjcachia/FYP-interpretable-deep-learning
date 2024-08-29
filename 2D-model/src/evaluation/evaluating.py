@@ -64,7 +64,7 @@ class LIDCEvaluationDataset(Dataset):
         
         # final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
 
-        final_pred_label = nodule_data.iloc[:]['Malignancy'].values
+        final_pred_label = nodule_data.iloc[:]['Malignancy'].values.squeeze(0)
         
         return torch.stack(images), final_pred_label
 
@@ -78,13 +78,15 @@ def evaluate_model(model, data_loader, device):
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
-            labels = labels.float().unsqueeze(1).to(device)
+            labels = labels.float().to(device)
             
             # Reshape slices if your model expects a single batch dimension
             if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
                 slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
             
             predictions = model(slices)
+            
+            print(predictions.shape)
             
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
                 predictions = predictions.squeeze(1)
@@ -102,7 +104,7 @@ def evaluate_model(model, data_loader, device):
             print(labels.shape, labels.type(), median_prediction.shape, median_prediction.type())
             
             # Append the final prediction for the nodule
-            final_pred_targets.append(labels.numpy())
+            final_pred_targets.append(labels.cpu().numpy())
             final_pred_outputs.append(median_prediction.detach().cpu().numpy())
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
@@ -113,8 +115,8 @@ def evaluate_model(model, data_loader, device):
     print(balanced_accuracy, f1, precision, recall, auc)
     # calculate confusion matrix
     confusion_matrix = np.zeros((2, 2), dtype=int)
-    # for i, l in enumerate(final_pred_targets):
-    #     confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
+    for i, l in enumerate(final_pred_targets):
+        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
     
     metrics = {'final_balanced_accuracy': balanced_accuracy,
                'final_f1': f1,
