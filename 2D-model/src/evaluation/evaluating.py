@@ -73,19 +73,28 @@ def evaluate_model(model, data_loader, device):
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
-            print(slices.shape)
-            slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))
-            print(slices.shape)
+            
+            slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4)) # Reshape to (N*S, C, H, W)
             
             predictions = model(slices)
 
+            print(predictions.shape)
+            
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
                 predictions = predictions.squeeze(1)
             
+            print(predictions.shape)
+            
+            print(predictions)
             # Calculate the median prediction for the nodule
             median_prediction = predictions.median()
+            
+            print(median_prediction)
+            
             median_prediction = median_prediction.round()
-                        
+            
+            print(median_prediction)
+            
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
             final_pred_outputs.append(median_prediction.detach().cpu().numpy())
