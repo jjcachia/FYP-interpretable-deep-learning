@@ -128,7 +128,8 @@ def main():
 
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
-    min_val_loss = float('inf')
+    max_val_bacc = float(0)
+    # min_val_loss = float('inf')
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\n" + "-"*100)
@@ -149,8 +150,8 @@ def main():
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased
-        if test_metrics['average_loss'] < min_val_loss and test_metrics['final_balanced_accuracy'] > 0.7:
-            min_val_loss = test_metrics['average_loss']
+        if test_metrics['final_balanced_accuracy'] > max_val_bacc and test_metrics['final_balanced_accuracy'] > 0.70:
+            max_val_bacc = test_metrics['final_balanced_accuracy']
             save_model_in_chunks(model.state_dict(), best_model_path)
 
         epoch_end = time.time()  # End time of the current epoch
