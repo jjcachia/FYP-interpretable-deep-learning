@@ -27,7 +27,7 @@ class BaseModel(nn.Module):
         cnn_backbone_output_channel_size = self.backbone.get_output_channels()
         
         self.add_on_layers = nn.Sequential(
-            nn.Conv2d(cnn_backbone_output_channel_size, 512, kernel_size=1),
+            nn.Conv2d(in_channels=cnn_backbone_output_channel_size, out_channels=512, kernel_size=1),
             nn.BatchNorm2d(512),
             nn.ReLU(),
             nn.Dropout(0.2)
@@ -45,6 +45,8 @@ class BaseModel(nn.Module):
     def forward(self, x):
         # Feature Extraction
         x = self.backbone(x)
+        
+        x = self.add_on_layers(x)
         
         # Final Malignancy Prediction
         final_output = torch.sigmoid(self.final_classifier(x))
