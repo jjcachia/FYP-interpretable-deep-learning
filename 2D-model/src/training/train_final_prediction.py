@@ -85,16 +85,17 @@ def evaluate_model(data_loader, model, device):
     final_pred_outputs = []
     confusion_matrix = np.zeros((2, 2), dtype=int)
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
-        for X, _, _, y, bweight_pred in tqdm(data_loader, leave=False):
+        for X, _, _, y, _ in tqdm(data_loader, leave=False):
             images = X.to(device)
-            labels = y.float().unsqueeze(1).to(device)
+            y = y.float().unsqueeze(1).to(device)
             outputs = model(images)
             preds = outputs.round()
             final_pred_targets.extend(y.cpu().numpy())
             final_pred_outputs.extend(preds.detach().cpu().numpy())
             
-            for i, l in enumerate(labels):
-                confusion_matrix[l.item(), preds[i].item()] += 1
+            for i, l in enumerate(labels.int()):
+                confusion_matrix[l.item(), int(preds[i].item())] += 1
+
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
     f1 = f1_score(final_pred_targets, final_pred_outputs)
