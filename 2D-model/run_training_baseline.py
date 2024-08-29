@@ -109,7 +109,6 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = 100
 
-    
     if args.model not in MODEL_DICT:
         raise ValueError(f"Unsupported model name {args.model}")
     construct_Model = MODEL_DICT[args.model]
@@ -124,7 +123,7 @@ def main():
 
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
-    min_val_f1 = float('inf')
+    max_val_f1 = float(0)
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\n" + "-"*100)
@@ -145,8 +144,8 @@ def main():
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased
-        if test_metrics['final_f1'] < min_val_f1:
-            min_val_f1 = test_metrics['final_f1']
+        if test_metrics['final_f1'] > max_val_f1:
+            max_val_f1 = test_metrics['final_f1']
             save_model_in_chunks(model.state_dict(), best_model_path)
 
         epoch_end = time.time()  # End time of the current epoch
@@ -169,7 +168,6 @@ def main():
     # Save the test metrics to a CSV file
     df_test = pd.DataFrame(test_metrics)
     df_test.to_csv(test_metrics_path)
-    
 
 if __name__ == '__main__':
     main()
