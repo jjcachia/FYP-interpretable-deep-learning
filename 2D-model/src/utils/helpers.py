@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 import pickle
 import shutil
+import random
 
 # Function to save metrics to a CSV file
 def save_metrics_to_csv(all_train_metrics, all_test_metrics, csv_path):
@@ -207,3 +208,17 @@ def select_device_with_most_memory():
         selected_device = torch.device('cpu')
     
     return selected_device
+
+def set_seed(seed=42):
+    """Set the seed for reproducibility in numpy, random, and PyTorch."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # For CUDA-enabled GPUs, if any
+    
+    # Additionally, you might want to ensure that PyTorch runs deterministically
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    
+    # Environment variable for MKL (if using Intel MKL) to act deterministically
+    os.environ['PYTHONHASHSEED'] = str(seed)

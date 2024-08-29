@@ -2,7 +2,7 @@ import os, time, gc, argparse, shutil
 import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
-from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks
+from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
 from src.loaders._2D.dataloader import LIDCDataset
 from src.training.train_final_prediction import train_step, test_step, evaluate_model
 from src.models.base_model import construct_baseModel
@@ -57,6 +57,9 @@ def main():
     test_metrics_path = os.path.join(paths['metrics'], 'test_metrics.csv')
     plot_path = os.path.join(paths['plots'], 'loss_plot.png')
 
+    # Set the seed for reproducibility
+    set_seed(27)
+    
     # Save the script to the experiment directory
     shutil.copy(__file__, os.path.join(paths['scripts'], 'main.py'))
     
@@ -125,7 +128,8 @@ def main():
 
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
-    min_val_loss = float('inf')
+    # min_val_loss = float('inf')
+    max_val_f1 = 0
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\n" + "-"*100)
@@ -146,8 +150,8 @@ def main():
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased
-        if test_metrics['average_loss'] < min_val_loss:
-            min_val_loss = test_metrics['average_loss']
+        if test_metrics['final_f1'] > max_val_f1 and test_metrics['final_balanced_accuracy'] > 0.7:
+            max_val_f1 = test_metrics['final_f1']
             save_model_in_chunks(model.state_dict(), best_model_path)
 
         epoch_end = time.time()  # End time of the current epoch
