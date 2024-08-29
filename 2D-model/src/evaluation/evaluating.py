@@ -40,7 +40,9 @@ class LIDCEvaluationDataset(Dataset):
         test_labels = all_labels[all_labels['patient_id'].isin(test_patients)]
         
         # Group the test labels by nodule
-        test_labels['nodule_id'] = test_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
+        # test_labels['nodule_id'] = test_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
+        test_labels.loc[:, 'nodule_id'] = test_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
+
         self.nodule_labels = test_labels.groupby('nodule_id')
         self.nodule_keys = list(self.nodule_labels.groups.keys())
 
@@ -74,7 +76,11 @@ def evaluate_model(model, data_loader, device):
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
             
-            slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4)) # Reshape to (N*S, C, H, W)
+            # Reshape slices if your model expects a single batch dimension
+            if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
+                slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
+
+            print(f"Slices shape: {slices.shape}, of type {slices.dtype}")
             
             predictions = model(slices)
 
