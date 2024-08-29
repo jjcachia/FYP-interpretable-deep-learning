@@ -98,7 +98,7 @@ def evaluate_model(model, data_loader, device):
             # Calculate the median prediction for the nodule
             # median_prediction = predictions.median()
             
-            print(median_prediction)
+            # print(median_prediction)
             
             median_prediction = predictions.round()
             
