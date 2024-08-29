@@ -62,10 +62,8 @@ class LIDCEvaluationDataset(Dataset):
         if self.transform:
             images = [self.transform(Image.fromarray(img)) for img in images]
         
-        # final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
+        final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
 
-        final_pred_label = nodule_data.iloc[:]['Malignancy'].values
-        
         return torch.stack(images), final_pred_label
 
 def evaluate_model(model, data_loader, device):
@@ -78,41 +76,44 @@ def evaluate_model(model, data_loader, device):
     with torch.no_grad():
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
-            labels = labels.float().to(device).view(-1)
-            
-            print(labels.shape)
             
             # Reshape slices if your model expects a single batch dimension
             if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
                 slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
+
+            print(f"Slices shape: {slices.shape}, of type {slices.dtype}")
             
             predictions = model(slices)
-            
+
             print(predictions.shape)
             
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
                 predictions = predictions.squeeze(1)
             
-            # Calculate the median prediction for the nodule
-            # median_prediction = predictions.median()
+            print(predictions.shape)
             
-            median_prediction = predictions.round()
-                        
+            print(predictions)
+            # Calculate the median prediction for the nodule
+            median_prediction = predictions.median()
+            
             print(median_prediction)
-            print(labels)
+            
+            median_prediction = median_prediction.round()
+            
+            print(median_prediction)
             
             print(labels.shape, labels.type(), median_prediction.shape, median_prediction.type())
             
             # Append the final prediction for the nodule
-            final_pred_targets.append(labels.cpu().numpy())
-            final_pred_outputs.append(median_prediction.cpu().numpy())
+            final_pred_targets.append(labels.numpy())
+            final_pred_outputs.append(median_prediction.detach().cpu().numpy())
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
     f1 = f1_score(final_pred_targets, final_pred_outputs)
     precision = precision_score(final_pred_targets, final_pred_outputs)
     recall = recall_score(final_pred_targets, final_pred_outputs)
     auc = roc_auc_score(final_pred_targets, final_pred_outputs)
-    print(balanced_accuracy, f1, precision, recall, auc)
+    
     # calculate confusion matrix
     confusion_matrix = np.zeros((2, 2), dtype=int)
     for i, l in enumerate(final_pred_targets):
