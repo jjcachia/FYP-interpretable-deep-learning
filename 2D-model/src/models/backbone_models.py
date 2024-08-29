@@ -32,7 +32,7 @@ class denseNet121(nn.Module):
     #    final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
     #    return final_bn_layer.weight.shape[0]
     
-    def get_output_channel_dims(self):
+    def get_output_dims(self):
         return 1024, 3, 3
     
     def conv_info(self):
