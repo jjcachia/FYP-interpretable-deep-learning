@@ -4,18 +4,19 @@ import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn a
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
 from src.loaders._2D.dataloader import LIDCDataset
-from src.training.train_final_prediction import train_step, test_step
+from src.training.train_final_prediction import train_step, test_step, evaluate_model
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
-from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model
+from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
+
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
 CHOSEN_CHARS = [False, True, False, True, True, False, False, True]
 
-DEFAULT_BATCH_SIZE = 25
+DEFAULT_BATCH_SIZE = 50
 DEFAULT_EPOCHS = 100
-DEFAULT_LEARNING_RATE = 0.00001
+DEFAULT_LEARNING_RATE = 0.0001
 
 MODEL_DICT = {
     'baseline': construct_baselineModel,
@@ -95,6 +96,10 @@ def main():
     # validation set
     LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='val')
     val_dataloader = torch.utils.data.DataLoader(LIDC_valset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    
+    # test set
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     batch_images = next(iter(train_dataloader))
 
@@ -103,7 +108,7 @@ def main():
 
 
     ###############################################################################################################
-    ####################################### Training the model ####################################################
+    ###################################### Initialize the model ###################################################
     ###############################################################################################################
     print("\n\n" + "#"*100 + "\n\n")
     gc.collect()
@@ -121,6 +126,13 @@ def main():
     model = construct_Model(backbone_name=args.backbone, weights=args.weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
+    print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+    
+    
+    ###############################################################################################################
+    ####################################### Training the model ####################################################
+    ###############################################################################################################
+    print("\n\n" + "#"*100 + "\n\n")
     # Initialize lists to store metrics over epochs
     all_train_metrics = []
     all_test_metrics = []
@@ -162,18 +174,26 @@ def main():
     save_metrics_to_csv(all_train_metrics, all_test_metrics, metrics_path)  # Save metrics to a CSV file
     plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path)  # Plot and save the loss
     
-    
     ###############################################################################################################
     ####################################### Evaluate the model ####################################################
     ###############################################################################################################
+    print("\n\n" + "#"*100 + "\n\n")
     
-    # test set
-    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
-    
-    # Evaluate the model on the test set
+    # Load the best model
     model.load_state_dict(load_model_from_chunks(best_model_path))
-    test_metrics, test_confusion_matrix = evaluate_model(model, test_dataloader, device)
+    
+    # Evaluate the model on each slice
+    test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)    
+    
+    # Group slices by nodule and evaluate the model on each nodule
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(test_dataloader, model, device)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
