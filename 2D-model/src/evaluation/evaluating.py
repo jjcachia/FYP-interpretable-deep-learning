@@ -102,6 +102,8 @@ def evaluate_model(model, data_loader, device):
             
             print(median_prediction)
             print(labels)
+            labels.squeeze(0)
+            print(labels.shape, median_prediction.shape)
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
             final_pred_outputs.append(median_prediction.cpu().numpy())
@@ -114,8 +116,8 @@ def evaluate_model(model, data_loader, device):
     
     # calculate confusion matrix
     confusion_matrix = np.zeros((2, 2), dtype=int)
-    for i, l in enumerate(final_pred_targets):
-        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
+    # for i, l in enumerate(final_pred_targets):
+    #     confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
     
     metrics = {'final_balanced_accuracy': balanced_accuracy,
                'final_f1': f1,
