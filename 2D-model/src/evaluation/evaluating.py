@@ -64,7 +64,7 @@ class LIDCEvaluationDataset(Dataset):
         
         # final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
 
-        final_pred_label = nodule_data.iloc[:]['Malignancy'].values.squeeze(0)
+        final_pred_label = nodule_data.iloc[:]['Malignancy'].values
         
         return torch.stack(images), final_pred_label
 
@@ -79,6 +79,8 @@ def evaluate_model(model, data_loader, device):
         for slices, labels in tqdm(data_loader, leave=False):
             slices = slices.to(device)
             labels = labels.float().to(device)
+            
+            print(labels.shape)
             
             # Reshape slices if your model expects a single batch dimension
             if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
