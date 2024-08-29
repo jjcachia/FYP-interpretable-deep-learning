@@ -97,7 +97,8 @@ def evaluate_model(model, data_loader, device):
             # median_prediction = predictions.median()
             
             median_prediction = predictions.round()
-                        
+            median_prediction = median_prediction.flatten()
+            labels = labels.flatten()
             print(median_prediction, labels)            
             print(labels.shape, labels.type(), median_prediction.shape, median_prediction.type())
             
