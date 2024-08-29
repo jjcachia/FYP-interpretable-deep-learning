@@ -105,7 +105,7 @@ def evaluate_model(model, data_loader, device):
             
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.cpu().numpy())
-            final_pred_outputs.append(median_prediction.detach().cpu().numpy())
+            final_pred_outputs.append(median_prediction.cpu().numpy())
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
     f1 = f1_score(final_pred_targets, final_pred_outputs)
