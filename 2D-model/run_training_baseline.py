@@ -23,15 +23,16 @@ MODEL_DICT = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
+    parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
+    
     parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='base', help='Model to train')
-    parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
-    parser.add_argument('--device', type=str, default='0', help='GPU device to use')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     
     parser.add_argument('--img_channels', type=int, default=IMG_CHANNELS, help='Number of channels in the input image')
     parser.add_argument('--img_size', type=int, default=IMG_SIZE, help='Size of the input image')
     
+    parser.add_argument('--device', type=str, default='0', help='GPU device to use')
     parser.add_argument('--batch_size', type=int, default=DEFAULT_BATCH_SIZE, help='Batch size for training')
     parser.add_argument('--epochs', type=int, default=DEFAULT_EPOCHS, help='Number of epochs to train')
     parser.add_argument('--learning_rate', type=float, default=DEFAULT_LEARNING_RATE, help='Learning rate for optimizer')

@@ -26,11 +26,14 @@ class denseNet121(nn.Module):
     def forward(self, x):
         return self.features(x)
     
-    def get_output_channels(self):
-        """ Returns the number of output channels from the final convolutional layer. """
-        final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
-        final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
-        return final_bn_layer.weight.shape[0]
+    #def get_output_channels(self):
+    #    """ Returns the number of output channels from the final convolutional layer. """
+    #    final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
+    #    final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
+    #    return final_bn_layer.weight.shape[0]
+    
+    def get_output_channel_dims(self):
+        return 1024, 3, 3
     
     def conv_info(self):
         """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
@@ -61,21 +64,9 @@ class denseNet169(nn.Module):
     def forward(self, x):
         return self.features(x)
     
-    def get_output_channels(self):
+    def get_output_dims(self):
         """ Returns the number of output channels from the final convolutional layer. """
-        final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
-        final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
-        return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
-
-    def conv_info(self):
-        """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
-        conv_layers = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)]
-        kernel_sizes, strides, paddings = [], [], []
-        for conv in conv_layers:
-            kernel_sizes.append(conv.kernel_size[0])
-            strides.append(conv.stride[0])
-            paddings.append(conv.padding[0])
-        return kernel_sizes, strides, paddings
+        return 1664, 3, 3
 
 class denseNet201(nn.Module):
     """ DenseNet201-based Feature Extractor for feature extraction.
@@ -96,21 +87,73 @@ class denseNet201(nn.Module):
     def forward(self, x):
         return self.features(x)
     
-    def get_output_channels(self):
+    def get_output_dims(self):
         """ Returns the number of output channels from the final convolutional layer. """
-        final_bn_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.BatchNorm2d)][-1]
-        final_conv_layer = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)][-1]
-        return final_bn_layer.weight.shape[0], final_conv_layer.weight.shape[2], final_conv_layer.weight.shape[3]
+        return 1920, 3, 3
     
-    def conv_info(self):
-        """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
-        conv_layers = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)]
-        kernel_sizes, strides, paddings = [], [], []
-        for conv in conv_layers:
-            kernel_sizes.append(conv.kernel_size[0])
-            strides.append(conv.stride[0])
-            paddings.append(conv.padding[0])
-        return kernel_sizes, strides, paddings
+class resNet34(nn.Module):
+    """ ResNet34-based Feature Extractor for feature extraction.
+        Total number of parameters:  21797672 (21.80 million) 
+        Returns a feature map of size 512x7x7. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        super(resNet34, self).__init__()
+        resnet = models.resnet34(weights=weights)
+        self.features = nn.Sequential(*list(resnet.children())[:-2])
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_dims(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        return 512, 4, 4
+
+class resNet152(nn.Module):
+    """ ResNet152-based Feature Extractor for feature extraction.
+        Total number of parameters:  60192808 (60.19 million) 
+        Returns a feature map of size 2048x7x7. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        super(resNet152, self).__init__()
+        resnet = models.resnet152(weights=weights)
+        self.features = nn.Sequential(*list(resnet.children())[:-2])
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_dims(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        return 2048, 4, 4
+
+class vgg16(nn.Module):
+    """ VGG16-based Feature Extractor for feature extraction.
+        Total number of parameters:  138357544 (138.36 million) 
+        Returns a feature map of size 512x7x7. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        super(vgg16, self).__init__()
+        vgg = models.vgg16(weights=weights)
+        self.features = nn.Sequential(*list(vgg.children())[:-1])
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_dims(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        return 512, 3, 3
+    
+class vgg19(nn.Module):
+    """ VGG19-based Feature Extractor for feature extraction.
+        Total number of parameters:  143667240 (143.67 million) 
+        Returns a feature map of size 512x7x7. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        super(vgg19, self).__init__()
+        vgg = models.vgg19(weights=weights)
+        self.features = nn.Sequential(*list(vgg.children())[:-1])
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_dims(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        return 512, 3, 3
 
 ############################################################################################################################################################################
 ######################################################################### Feature Pyramid Networks ##########################################################################
