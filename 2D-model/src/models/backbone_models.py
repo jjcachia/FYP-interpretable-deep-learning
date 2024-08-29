@@ -137,7 +137,7 @@ class vgg16(nn.Module):
     
     def get_output_dims(self):
         """ Returns the number of output channels from the final convolutional layer. """
-        return 512, 3, 3
+        return 512, 7, 7
     
 class vgg19(nn.Module):
     """ VGG19-based Feature Extractor for feature extraction.
@@ -153,7 +153,7 @@ class vgg19(nn.Module):
     
     def get_output_dims(self):
         """ Returns the number of output channels from the final convolutional layer. """
-        return 512, 3, 3
+        return 512, 7, 7
 
 ############################################################################################################################################################################
 ######################################################################### Feature Pyramid Networks ##########################################################################
