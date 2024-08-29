@@ -82,8 +82,10 @@ def evaluate_model(model, data_loader, device):
 
             print(f"Slices shape: {slices.shape}, of type {slices.dtype}")
             
-            predictions = model(slices)
+            # predictions = model(slices)
 
+            predictions = torch.tensor([model(slice.unsqueeze(0)).item() for slice in slices])
+            
             print(predictions.shape)
             
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
