@@ -24,7 +24,7 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()        
         self.backbone = backbone(weights=weights, common_channel_size=common_channel_size)
         
-        cnn_backbone_output_channel_size = self.backbone.get_output_channel_size()
+        cnn_backbone_output_channel_size = self.backbone.get_output_channels()
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),

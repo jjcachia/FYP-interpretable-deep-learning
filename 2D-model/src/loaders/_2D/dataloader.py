@@ -10,7 +10,6 @@ import os
 class LIDCDataset(Dataset):
     def __init__(self, labels_file, transform=None, chosen_chars=None, indeterminate=True, split='train', validation_split=0.10, test_split=0.10):
         all_labels = pd.read_csv(labels_file)
-        self.num_characteristics = len(all_labels.columns) - 2 # Subtract 2 to exclude the image_dir and malignancy columns
         self.transform = transform
         self.chosen_chars = chosen_chars
 
@@ -61,6 +60,7 @@ class LIDCDataset(Dataset):
 
         # Extract the weights for each characteristic
         characteristics = self.labels[self.labels.columns[1:-2]]
+        self.num_characteristics = len(characteristics.columns)
         malignancy = self.labels[['Malignancy']]
         
         class_counts = characteristics.apply(pd.Series.value_counts)
@@ -74,14 +74,14 @@ class LIDCDataset(Dataset):
 
     def __getitem__(self, idx):
         # Load the image
-        path = self.labels['image_dir'][idx]
-        image = np.load(path)
-        image = Image.fromarray(image)
-        
+        path = self.labels['image_dir'].iloc[idx]
+        array = np.load(path)
+        image = Image.fromarray(array)
+
         # Apply Preprocessing to the image
         if self.transform:
             image = self.transform(image)
-
+        
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
@@ -91,14 +91,14 @@ class LIDCDataset(Dataset):
                 continue
             label = characteristics.iloc[idx, char_idx]
             label_chars.append(label)
-            bweight_chars.append(self.char_weights[label, char_idx])
-                        
+            bweight_chars.append(self.char_weights.iloc[label, char_idx])
+            
         # Extract the final prediction label and binary weight
-        final_pred_label = self.labels['Malignancy'][idx]
-        bweight_fpred = self.malignancy_weights[final_pred_label]
-
+        final_pred_label = self.labels['Malignancy'].iloc[idx]
+        bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
+        
         # Apply Data Augmentation to the image
         if self.transforms:
             image = self.transforms(image)
-
+            
         return image, label_chars, bweight_chars, final_pred_label, bweight_fpred
