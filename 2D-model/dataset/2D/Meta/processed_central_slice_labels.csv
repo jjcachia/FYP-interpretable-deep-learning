@@ -513,7 +513,6 @@ image_dir,Diameter,Subtlety,Internalstructure,Calcification,Sphericity,Margin,Lo
 ./dataset/2D/processed-central-slices/LIDC-IDRI-0325/NODULE-1/SLICE-14.npy,5,4,1,6,2,2,3,4,5,4
 ./dataset/2D/processed-central-slices/LIDC-IDRI-0326/NODULE-1/SLICE-2.npy,2,3,1,6,4,4,2,2,4,3
 ./dataset/2D/processed-central-slices/LIDC-IDRI-0326/NODULE-2/SLICE-2.npy,2,3,1,6,4,4,2,1,4,3
-./dataset/2D/processed-central-slices/LIDC-IDRI-0332/NODULE-1/SLICE-7.npy,5,5,1,6,3,3,3,2,4,5
 ./dataset/2D/processed-central-slices/LIDC-IDRI-0332/NODULE-2/SLICE-5.npy,3,4,1,6,2,4,3,4,5,3
 ./dataset/2D/processed-central-slices/LIDC-IDRI-0332/NODULE-1/SLICE-12.npy,4,4,1,6,3,3,4,3,5,3
 ./dataset/2D/processed-central-slices/LIDC-IDRI-0334/NODULE-1/SLICE-3.npy,3,3,1,6,4,3,3,4,4,4
