@@ -194,7 +194,7 @@ def main():
     # Group slices by nodule and evaluate the model on each nodule
     # test set
     LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=None, shuffle=False, num_workers=0) # Predict one nodule at a time
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
     
     # Evaluate the model on the test set
     test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="mean")
