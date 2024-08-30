@@ -185,7 +185,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
                 predictions = predictions.squeeze(1)
-
+            print(f"predictions: {predictions}")
             if mode == "median":
                 # Calculate the median prediction for the nodule
                 predictions = predictions.median()
@@ -203,10 +203,10 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                 weights = weights / weights.sum()
                 predictions = (predictions * weights).sum()
             # elif mode == "max_quarter":
-            
+            print(f"Processed predictions: {predictions}")
             # predictions = predictions.round()
             predictions = (predictions > decision_threshold).float()
-            
+            print(f"Binarized predictions: {predictions}")
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
             final_pred_outputs.append(predictions.cpu().numpy())
