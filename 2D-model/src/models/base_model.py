@@ -24,7 +24,7 @@ BACKBONE_DICT = {
 class BaseModel(nn.Module):
     def __init__(self, backbone, weights, common_channel_size, hidden_layers):
         super(BaseModel, self).__init__()        
-        self.backbone = backbone(weights=weights, common_channel_size=common_channel_size)
+        self.backbone = backbone(weights=weights)
         
         # cnn_backbone_output_channel_size = self.backbone.get_output_channels()
         out_C, out_H, out_W = self.backbone.get_output_dims()
