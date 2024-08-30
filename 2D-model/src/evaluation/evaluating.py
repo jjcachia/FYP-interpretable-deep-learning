@@ -117,7 +117,7 @@ def _evaluate_model_by_nodule(model, data_loader, device):
     return metrics, confusion_matrix
 
 
-def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision_threshold=0.5):
+def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision_threshold=0.5, std_dev=1.2):
     model.to(device)
     model.eval()
     
@@ -150,7 +150,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                 # mean = (num_slices - 1) / 2
                 mean = num_slices / 2
                 # std_dev = num_slices / 8
-                std_dev = 1.2
+                std_dev = std_dev
                 weights = norm.pdf(x, mean, std_dev)
                 weights = torch.tensor(weights, dtype=torch.float32, device=device)
                 weights = weights / weights.sum()
