@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from src.models.backbone_models import denseNet121, denseNet169, denseNet201, resNet34, resNet152, vgg16, vgg19, denseFPN_121, denseFPN_201
+from src.models.backbone_models import denseNet121, denseNet169, denseNet201, resNet34, resNet152, vgg16, vgg19, denseFPN_121, denseFPN_201, efficientFPN_v2_s
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
@@ -13,7 +13,8 @@ BACKBONE_DICT = {
     'vgg16': vgg16,
     'vgg19': vgg19,
     'denseFpn121': denseFPN_121,
-    'denseFpn201': denseFPN_201
+    'denseFpn201': denseFPN_201,
+    'efficientFpn': efficientFPN_v2_s
 }
 
 
@@ -30,15 +31,15 @@ class BaseModel(nn.Module):
         out_C, out_H, out_W = self.backbone.get_output_dims()
         
         self.add_on_layers = nn.Sequential(
-            nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
-            nn.BatchNorm2d(512),
+            nn.Conv2d(in_channels=out_C, out_channels=out_C/2, kernel_size=1),
+            nn.BatchNorm2d(out_C/2),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(512*out_H*out_W, hidden_layers),
+            nn.Linear((out_C/2)*out_H*out_W, hidden_layers),
             nn.BatchNorm1d(hidden_layers),
             nn.ReLU(),
             nn.Dropout(0.2), # 0.2
