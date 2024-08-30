@@ -79,13 +79,13 @@ class LIDCDataset(Dataset):
         # Load the image
         path = self.labels['image_dir'].iloc[idx]
         array = np.load(path)
-        array = np.expand_dims(array, axis=0) # Convert to 1-channel image
-        array = np.repeat(array, 3, axis=0) # Convert to 3-channel image
-        image = torch.from_numpy(array)
-        # image = Image.fromarray(array)
+        # array = np.expand_dims(array, axis=0) # Convert to 1-channel image
+        # array = np.repeat(array, 3, axis=0) # Convert to 3-channel image
+        # image = torch.from_numpy(array)
+        image = Image.fromarray(array)
         # Apply Preprocessing to the image
-        # if self.transform:
-        #     image = self.transform(image)
+        if self.transform:
+            image = self.transform(image)
         
         # Extract the labels and binary weights for each characteristic
         label_chars = []

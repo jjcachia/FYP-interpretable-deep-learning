@@ -87,7 +87,8 @@ def main():
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
     # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
     # transform = transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()])
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
@@ -121,7 +122,8 @@ def main():
     if args.model not in MODEL_DICT:
         raise ValueError(f"Unsupported model name {args.model}")
     construct_Model = MODEL_DICT[args.model]
-    
+    if weights == 'None':
+        weights = None
     # Create the model instance
     model = construct_Model(backbone_name=args.backbone, weights=args.weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
