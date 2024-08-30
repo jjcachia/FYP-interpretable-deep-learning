@@ -122,8 +122,8 @@ def main():
     if args.model not in MODEL_DICT:
         raise ValueError(f"Unsupported model name {args.model}")
     construct_Model = MODEL_DICT[args.model]
-    if weights == 'None':
-        weights = None
+    if args.weights == 'None':
+        args.weights = None
     # Create the model instance
     model = construct_Model(backbone_name=args.backbone, weights=args.weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
