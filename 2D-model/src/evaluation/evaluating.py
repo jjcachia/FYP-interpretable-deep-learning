@@ -147,8 +147,8 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                 # Generate Gaussian weights centered at the central slice of the nodule
                 num_slices = predictions.size(0)
                 x = np.linspace(0, num_slices-1, num_slices)
-                mean = (num_slices - 1) / 2
-                # mean = num_slices / 2
+                # mean = (num_slices - 1) / 2
+                mean = num_slices / 2
                 std_dev = num_slices / std_dev
                 # std_dev = std_dev
                 weights = norm.pdf(x, mean, std_dev)
