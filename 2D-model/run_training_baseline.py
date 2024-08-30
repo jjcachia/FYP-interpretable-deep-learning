@@ -193,7 +193,6 @@ def main():
     
     # Group slices by nodule and evaluate the model on each nodule
     # test set
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'slice_labels.csv')
     LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=None, shuffle=False, num_workers=0) # Predict one nodule at a time
     
