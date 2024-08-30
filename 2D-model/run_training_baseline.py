@@ -87,7 +87,7 @@ def main():
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
     # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'centroid_slice_labels.csv')
     transform = transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()])
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
@@ -190,14 +190,14 @@ def main():
     print(test_confusion_matrix)    
     
     # Group slices by nodule and evaluate the model on each nodule
-    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(test_dataloader, model, device)
-    print(f"Test Metrics:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
+    # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device)
+    # print(f"Test Metrics:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
     
     # Save the test metrics to a CSV file
     df_test = pd.DataFrame([test_metrics])
