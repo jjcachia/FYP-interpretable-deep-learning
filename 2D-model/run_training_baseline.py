@@ -161,7 +161,7 @@ def main():
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased
-        if test_metrics['final_balanced_accuracy'] > max_val_bacc and test_metrics['final_balanced_accuracy'] > 0.70 and epoch > 20:
+        if test_metrics['final_balanced_accuracy'] > max_val_bacc and test_metrics['final_balanced_accuracy'] > 0.70 and epoch > 10:
             max_val_bacc = test_metrics['final_balanced_accuracy']
             save_model_in_chunks(model.state_dict(), best_model_path)
 
