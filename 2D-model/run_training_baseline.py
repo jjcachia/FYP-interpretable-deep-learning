@@ -87,7 +87,7 @@ def main():
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
     # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
     # transform = transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()])
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
