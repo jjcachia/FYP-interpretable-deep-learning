@@ -6,8 +6,7 @@ from src.utils.helpers import setup_directories, load_model_from_chunks, set_see
 from src.loaders._2D.dataloader import LIDCDataset
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
-from src.evaluation.evaluating import LIDCEvaluationDataset#, evaluate_model
-from src.training.train_final_prediction import evaluate_model
+from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
@@ -84,6 +83,7 @@ def main():
     
     # Create the model instance
     model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    model.to(device)
     
     ###############################################################################################################
     ####################################### Evaluate the model ####################################################
@@ -92,15 +92,12 @@ def main():
     
     # test set
     labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'slice_labels.csv')
-    # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
-    # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=False, num_workers=0)
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
     
     # Evaluate the model on the test set
-    model.to(device)
     model.load_state_dict(load_model_from_chunks(best_model_path))
-    test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
