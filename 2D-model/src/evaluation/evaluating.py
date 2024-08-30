@@ -63,58 +63,9 @@ class LIDCEvaluationDataset(Dataset):
         if self.transform:
             images = [self.transform(Image.fromarray(img)) for img in images]
         
-        final_pred_label = nodule_data.iloc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
+        final_pred_label = nodule_data.loc[0]['Malignancy']  # Assuming 'Malignancy' is the last label
 
         return torch.stack(images), final_pred_label
-
-def evaluate_model_by_nodule(model, data_loader, device):
-    model.to(device)
-    model.eval()
-    
-    final_pred_targets = []
-    final_pred_outputs = []
-    
-    with torch.no_grad():
-        for slices, labels in tqdm(data_loader, leave=False):
-            slices = slices.to(device)
-            
-            # Reshape slices if your model expects a single batch dimension
-            if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
-                slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
-            
-            predictions = model(slices)
-            
-            if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
-                predictions = predictions.squeeze(1)
-
-            # Calculate the median prediction for the nodule
-            median_prediction = predictions.median()
-            
-            median_prediction = median_prediction.round()
-            
-            # Append the final prediction for the nodule
-            final_pred_targets.append(labels.numpy())
-            final_pred_outputs.append(median_prediction.cpu().numpy())
-
-    balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
-    f1 = f1_score(final_pred_targets, final_pred_outputs)
-    precision = precision_score(final_pred_targets, final_pred_outputs)
-    recall = recall_score(final_pred_targets, final_pred_outputs)
-    auc = roc_auc_score(final_pred_targets, final_pred_outputs)
-    
-    # calculate confusion matrix
-    confusion_matrix = np.zeros((2, 2), dtype=int)
-    for i, l in enumerate(final_pred_targets):
-        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
-    
-    metrics = {'final_balanced_accuracy': balanced_accuracy,
-               'final_f1': f1,
-               'final_precision': precision,
-               'final_recall': recall,
-               'final_auc': auc,
-            }
-
-    return metrics, confusion_matrix
 
 def _evaluate_model_by_nodule(model, data_loader, device):
     model.to(device)
@@ -185,7 +136,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             
             if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
                 predictions = predictions.squeeze(1)
-            print(f"predictions: {predictions}")
+
             if mode == "median":
                 # Calculate the median prediction for the nodule
                 predictions = predictions.median()
@@ -197,17 +148,17 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                 num_slices = predictions.size(0)
                 x = np.linspace(0, num_slices-1, num_slices)
                 mean = num_slices / 2
-                std_dev = num_slices / 8
-                # std_dev = 1.5
+                # std_dev = num_slices / 8
+                std_dev = 1
                 weights = norm.pdf(x, mean, std_dev)
                 weights = torch.tensor(weights, dtype=torch.float32, device=device)
                 weights = weights / weights.sum()
                 predictions = (predictions * weights).sum()
             # elif mode == "max_quarter":
-            print(f"Processed predictions: {predictions}")
+
             # predictions = predictions.round()
             predictions = (predictions > decision_threshold).float()
-            print(f"Binarized predictions: {predictions}")
+
             # Append the final prediction for the nodule
             final_pred_targets.append(labels.numpy())
             final_pred_outputs.append(predictions.cpu().numpy())
