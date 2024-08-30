@@ -193,7 +193,13 @@ def main():
     LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
     
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device)
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Median")
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Gaussian")
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
