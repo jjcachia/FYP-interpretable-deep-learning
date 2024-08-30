@@ -97,37 +97,37 @@ def main():
     
     # Evaluate the model on the test set
     model.load_state_dict(load_model_from_chunks(best_model_path))
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Median")
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)
     
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Median", decision_threshold=0.65)
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median", decision_threshold=0.65)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)
     
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Mean")
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="mean")
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)
     
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Mean", decision_threshold=0.65)
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="mean", decision_threshold=0.65)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)
     
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Gaussian")
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian")
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)
     
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Gaussian", decision_threshold=0.65)
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", decision_threshold=0.65)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
