@@ -35,7 +35,7 @@ class LIDCDataset(Dataset):
         random_state = 27
         unique_patients = all_labels['patient_id'].unique()    
         temp_patients, test_patients = train_test_split(unique_patients, test_size=test_split, random_state=random_state)
-        train_patients, val_patients = train_test_split(temp_patients, test_size=(validation_split/1-test_split), random_state=random_state)
+        train_patients, val_patients = train_test_split(temp_patients, test_size=(validation_split/(1-test_split)), random_state=random_state)
         
         # Assign the split data based on the chosen split
         if split == 'train':
