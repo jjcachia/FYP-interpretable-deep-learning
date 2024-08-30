@@ -87,7 +87,7 @@ def main():
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
     # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
     # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
     # transform = transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()])
     # train set
@@ -192,20 +192,71 @@ def main():
     print(test_confusion_matrix)    
     
     # Group slices by nodule and evaluate the model on each nodule
-    # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
-    # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Median")
-    # print(f"Test Metrics:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="Gaussian")
-    # print(f"Test Metrics:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
+    # test set
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'slice_labels.csv')
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=None, shuffle=False, num_workers=0) # Predict one nodule at a time
+    
+    # Evaluate the model on the test set
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="mean")
+    print(f"Test Metrics with Median Aggregation:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
+    print(f"Test Metrics with Median Aggregation:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.8)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.8:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.2)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.2:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.6)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.6:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.8)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.8:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
+    
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=2.0)
+    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 2.0:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
     
     # Save the test metrics to a CSV file
     df_test = pd.DataFrame([test_metrics])
