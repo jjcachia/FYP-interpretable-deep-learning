@@ -31,15 +31,15 @@ class BaseModel(nn.Module):
         out_C, out_H, out_W = self.backbone.get_output_dims()
         
         self.add_on_layers = nn.Sequential(
-            nn.Conv2d(in_channels=out_C, out_channels=out_C/2, kernel_size=1),
-            nn.BatchNorm2d(out_C/2),
+            nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
+            nn.BatchNorm2d(512),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear((out_C/2)*out_H*out_W, hidden_layers),
+            nn.Linear(512*out_H*out_W, hidden_layers),
             nn.BatchNorm1d(hidden_layers),
             nn.ReLU(),
             nn.Dropout(0.2), # 0.2
