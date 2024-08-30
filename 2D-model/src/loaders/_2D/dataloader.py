@@ -82,7 +82,6 @@ class LIDCDataset(Dataset):
         array = np.expand_dims(array, axis=0) # Convert to 1-channel image
         array = np.repeat(array, 3, axis=0) # Convert to 3-channel image
         image = torch.from_numpy(array)
-        print(f"Image shape: {image.shape}, Image type: {type(image)}")
         # image = Image.fromarray(array)
         # Apply Preprocessing to the image
         # if self.transform:
