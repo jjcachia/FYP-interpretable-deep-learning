@@ -400,10 +400,10 @@ class efficientFPN_v2_s(nn.Module):
         
         return fpn_output # 256x25x25
     
-    def get_output_channels(self):
+    def get_output_dims(self):
         """ Returns the number of output channels from the final convolutional layer. """
         # final_conv_layer = [layer for layer in self.fpn[-1].modules() if isinstance(layer, nn.Conv2d)][-1]
-        return self.common_channel_size
+        return self.common_channel_size, 50, 50
     
     def conv_info(self):
         """
