@@ -148,8 +148,8 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                 num_slices = predictions.size(0)
                 x = np.linspace(0, num_slices-1, num_slices)
                 mean = (num_slices - 1) / 2
-                # std_dev = num_slices / 8
-                std_dev = 1
+                std_dev = num_slices / 8
+                # std_dev = 1
                 weights = norm.pdf(x, mean, std_dev)
                 weights = torch.tensor(weights, dtype=torch.float32, device=device)
                 weights = weights / weights.sum()
