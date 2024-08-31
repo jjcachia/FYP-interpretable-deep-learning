@@ -116,7 +116,7 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = 100
 
-    if args.backbone is 'efficientNet3D':
+    if args.backbone == 'efficientNet3D':
         from efficientnet_pytorch_3d import EfficientNet3D #TODO: REMOVE IF NOT 3D
         model = EfficientNet3D.from_name("efficientnet-b0", in_channels=1, override_params={'num_classes': 1})
     else:

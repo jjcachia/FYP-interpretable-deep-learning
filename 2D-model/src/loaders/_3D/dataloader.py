@@ -92,7 +92,7 @@ class LIDCDataset(Dataset):
         path = self.labels['image_dir'].iloc[idx]
         array = np.load(path)
         # array = np.expand_dims(array, axis=0) # Convert to 1-channel volume        
-        vol = torch.from_numpy(array, dtype=torch.float32).unsqueeze(0).unsqueeze(0)    
+        vol = torch.from_numpy(array).unsqueeze(0).unsqueeze(0)    
         vol = F.interpolate(vol, size=(128,128,128), mode='trilinear', align_corners=True).squeeze(0)
         
         # Extract the labels and binary weights for each characteristic
