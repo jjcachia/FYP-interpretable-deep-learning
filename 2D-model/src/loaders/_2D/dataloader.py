@@ -76,8 +76,13 @@ class LIDCDataset(Dataset):
         self.labels['nodule_id'] = self.labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
         
         # Add slice index and total slice count per nodule
-        all_labels['slice_index'] = all_labels.groupby('nodule_id').cumcount()
-        all_labels['total_slices'] = all_labels.groupby('nodule_id')['slice_index'].transform('max') + 1
+        self.labels['slice_index'] = self.labels.groupby('nodule_id').cumcount()
+        self.labels['total_slices'] = self.labels.groupby('nodule_id')['slice_index'].transform('max') + 1
+        # 
+        # print(self.labels.columns)
+        # print(self.labels)
+        # print(self.labels['slice_index'])
+        # print(self.labels['total_slices'])
 
     def __len__(self):
         return len(self.labels)
@@ -94,12 +99,10 @@ class LIDCDataset(Dataset):
         # if self.transform:
         #     image = self.transform(image)
         
-        # Extract the labels and binary weights for each characteristic
-        print(self.labels.columns)
-        print(self.labels.iloc[idx])
         print(self.labels['slice_index'].iloc[idx])
         print(self.labels['total_slices'].iloc[idx])
         
+        # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
         characteristics = self.labels[self.labels.columns[1:-2]]
