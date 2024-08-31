@@ -93,12 +93,13 @@ def evaluate_model(data_loader, model, device):
             images = X.to(device)
             y = y.float().unsqueeze(1).to(device)
             outputs = model(images)
+            outputs = torch.sigmoid(outputs)
             preds = outputs.round()
             final_pred_targets.extend(y.cpu().numpy())
             final_pred_outputs.extend(preds.detach().cpu().numpy())
             
-            for i, l in enumerate(y.int()):
-                confusion_matrix[l.item(), int(preds[i].item())] += 1
+            # for i, l in enumerate(y.int()):
+            #     confusion_matrix[l.item(), int(preds[i].item())] += 1
 
 
     balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
