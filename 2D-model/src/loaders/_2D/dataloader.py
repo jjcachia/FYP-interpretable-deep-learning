@@ -71,6 +71,13 @@ class LIDCDataset(Dataset):
 
         class_counts = malignancy.apply(pd.Series.value_counts)
         self.malignancy_weights = class_counts.apply(lambda x: (x.mean()) / x)
+        
+        # Extract the number of slices of each nodule and the slice id
+        self.labels['nodule_id'] = self.labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
+        
+        # Add slice index and total slice count per nodule
+        all_labels['slice_index'] = all_labels.groupby('nodule_id').cumcount()
+        all_labels['total_slices'] = all_labels.groupby('nodule_id')['slice_index'].transform('max') + 1
 
     def __len__(self):
         return len(self.labels)
@@ -88,6 +95,11 @@ class LIDCDataset(Dataset):
         #     image = self.transform(image)
         
         # Extract the labels and binary weights for each characteristic
+        print(self.labels.columns)
+        print(self.labels.iloc[idx])
+        print(self.labels['slice_index'].iloc[idx])
+        print(self.labels['total_slices'].iloc[idx])
+        
         label_chars = []
         bweight_chars = []
         characteristics = self.labels[self.labels.columns[1:-2]]
