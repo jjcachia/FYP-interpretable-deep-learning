@@ -86,7 +86,7 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
     
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
