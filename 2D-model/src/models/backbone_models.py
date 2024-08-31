@@ -173,8 +173,8 @@ class efficientNet3D(nn.Module):
             common_channel_size (int): The size of the common channel. Default is None.
         """
         super(efficientNet3D, self).__init__()
-        efficientNet3D = EfficientNet3D.from_name("efficientnet-b0", override_params={'num_classes': 1}, in_channels=1)
-        self.features = efficientNet3D.extract_features
+        efficientNet = EfficientNet3D.from_name("efficientnet-b0", override_params={'num_classes': 1}, in_channels=1)
+        self.features = efficientNet.extract_features
 
     def forward(self, x):
         return self.features(x)

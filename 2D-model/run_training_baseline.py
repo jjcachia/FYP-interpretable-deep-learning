@@ -3,7 +3,7 @@ import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
-from src.loaders._2D.dataloader import LIDCDataset
+from src.loaders._3D.dataloader import LIDCDataset
 from src.training.train_final_prediction import train_step, test_step, evaluate_model
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
@@ -14,9 +14,9 @@ IMG_CHANNELS = 3
 IMG_SIZE = 100
 CHOSEN_CHARS = [False, True, False, True, True, False, False, True]
 
-DEFAULT_BATCH_SIZE = 50
+DEFAULT_BATCH_SIZE = 25
 DEFAULT_EPOCHS = 100
-DEFAULT_LEARNING_RATE = 0.0001
+DEFAULT_LEARNING_RATE = 0.00001
 
 MODEL_DICT = {
     'baseline': construct_baselineModel,
@@ -102,7 +102,7 @@ def main():
 
     batch_images = next(iter(train_dataloader))
 
-    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} (NCHW)\n")
+    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x {batch_images[0].shape[4]} (NCDHW)\n")
     print(f"Number of Characteristics: {len(batch_images[1])}")
 
     ###############################################################################################################
@@ -116,13 +116,18 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = 100
 
-    if args.model not in MODEL_DICT:
-        raise ValueError(f"Unsupported model name {args.model}")
-    construct_Model = MODEL_DICT[args.model]
-    if args.weights == 'None':
-        args.weights = None
-    # Create the model instance
-    model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    if args.backbone is 'efficientNet3D':
+        from efficientnet_pytorch_3d import EfficientNet3D #TODO: REMOVE IF NOT 3D
+        model = EfficientNet3D.from_name("efficientnet-b0", in_channels=1, override_params={'num_classes': 1})
+    else:
+        if args.model not in MODEL_DICT:
+            raise ValueError(f"Unsupported model name {args.model}")
+        construct_Model = MODEL_DICT[args.model]
+        if args.weights == 'None':
+            args.weights = None
+        # Create the model instance
+        model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
     print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
