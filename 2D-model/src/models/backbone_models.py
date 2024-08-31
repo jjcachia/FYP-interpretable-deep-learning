@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
+from efficientnet_pytorch_3d import EfficientNet3D
 
 ############################################################################################################################################################################
 ############################################################################ Base CNN Networks #############################################################################
@@ -156,7 +157,35 @@ class vgg19(nn.Module):
         return 512, 7, 7
 
 ############################################################################################################################################################################
-######################################################################### Feature Pyramid Networks ##########################################################################
+########################################################################## Base 3D CNN Networks ############################################################################
+############################################################################################################################################################################
+
+class efficientNet3D(nn.Module):
+    """ EfficientNet3D-based Feature Extractor for feature extraction.
+        Total number of parameters:  10285384 (10.29 million) 
+        Returns a feature map of size 1280x4x4. """
+    def __init__(self, weights='DEFAULT', common_channel_size=None):
+        """
+        Initializes the efficientNet3D class.
+        
+        Args:
+            weights (str): The weights to use for the EfficientNet3D features. Default is 'DEFAULT'.
+            common_channel_size (int): The size of the common channel. Default is None.
+        """
+        super(efficientNet3D, self).__init__()
+        efficientNet3D = EfficientNet3D.from_name("efficientnet-b0", override_params={'num_classes': 1}, in_channels=1)
+        self.features = efficientNet3D.extract_features
+
+    def forward(self, x):
+        return self.features(x)
+    
+    def get_output_dims(self):
+        """ Returns the number of output channels from the final convolutional layer. """
+        return 1280, 2, 2, 2
+
+
+############################################################################################################################################################################
+######################################################################### Feature Pyramid Networks #########################################################################
 ############################################################################################################################################################################
 
 class denseFPN_121(nn.Module):
