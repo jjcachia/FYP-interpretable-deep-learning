@@ -132,6 +132,13 @@ def main():
 
     print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     
+    # Pass dummy data through the model to check the output size
+    model.eval()
+    with torch.no_grad():
+        print(f"Input Shape: {batch_images[0].shape}")
+        output = model(batch_images[0])
+        print(f"Output Shape: {output.shape}")
+    model.train()
     
     ###############################################################################################################
     ####################################### Training the model ####################################################
