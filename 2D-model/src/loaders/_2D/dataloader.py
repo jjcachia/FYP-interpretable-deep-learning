@@ -101,7 +101,7 @@ class LIDCDataset(Dataset):
         slice_index = self.labels['slice_index'].iloc[idx]
         x = np.linspace(0, num_slices-1, num_slices)
         mean = (num_slices - 1) / 2
-        std_dev = 1.0
+        std_dev = (num_slices - 1) / 6
         weights = norm.pdf(x, mean, std_dev)
         weights = weights / weights.sum()
         slice_weight = weights[slice_index]

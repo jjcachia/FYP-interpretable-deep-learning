@@ -28,7 +28,11 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
             # Forward pass
             outputs = model(X)
             
+            print(f"Weights: {bweight_pred}, Slice Weight: {slice_weight}, shape: {bweight_pred.shape}, {slice_weight.shape}")
+            
             bweight_pred = bweight_pred * slice_weight
+            
+            print(f"Weights: {bweight_pred}, shape: {bweight_pred.shape}")
             
             # Compute loss
             loss = torch.nn.functional.binary_cross_entropy(outputs, y, weight = bweight_pred)
@@ -88,7 +92,7 @@ def evaluate_model(data_loader, model, device):
     final_pred_outputs = []
     confusion_matrix = np.zeros((2, 2), dtype=int)
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
-        for X, _, _, y, _ in tqdm(data_loader, leave=False):
+        for X, _, _, y, _,_ in tqdm(data_loader, leave=False):
             images = X.to(device)
             y = y.float().unsqueeze(1).to(device)
             outputs = model(images)
