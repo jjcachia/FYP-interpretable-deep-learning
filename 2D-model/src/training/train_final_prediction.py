@@ -22,7 +22,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
         for X, _, _, y, bweight_pred, slice_weight in tqdm(data_loader, leave=False):
             X, y = X.to(device), y.to(device)
             bweight_pred = bweight_pred.float().unsqueeze(1).to(device)
-            slice_weight = slice_weight.float().to(device)
+            slice_weight = slice_weight.float().unsqueeze(1).to(device)
             y = y.float().unsqueeze(1)
             
             # Forward pass
