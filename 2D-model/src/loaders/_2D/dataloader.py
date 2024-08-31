@@ -76,9 +76,7 @@ class LIDCDataset(Dataset):
         
         # Extract the number of slices of each nodule and the slice id
         self.labels['nodule_id'] = self.labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
-        
-        self.labels = self.labels.copy()
-        
+                
         # Add slice index and total slice count per nodule
         self.labels['slice_index'] = self.labels.groupby('nodule_id').cumcount()
         self.labels['total_slices'] = self.labels.groupby('nodule_id')['slice_index'].transform('max') + 1
