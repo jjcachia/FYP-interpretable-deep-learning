@@ -91,11 +91,10 @@ class LIDCDataset(Dataset):
         # Load the image
         path = self.labels['image_dir'].iloc[idx]
         array = np.load(path)
-        print(f"Min: {array.min()}, Max: {array.max()}, Shape: {array.shape}")
         # array = np.expand_dims(array, axis=0) # Convert to 1-channel volume        
         vol = torch.from_numpy(array).unsqueeze(0).unsqueeze(0)    
         vol = F.interpolate(vol, size=(128,128,128), mode='trilinear', align_corners=True).squeeze(0)
-        print(f"Min: {vol.min()}, Max: {vol.max()}, Shape: {vol.shape}")
+        
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
@@ -112,7 +111,7 @@ class LIDCDataset(Dataset):
         bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
         
         # Apply Data Augmentation to the image
-        # if self.transforms:
-        #     vol = self.transforms(vol)
+        if self.transforms:
+            vol = self.transforms(vol)
             
         return vol, label_chars, bweight_chars, final_pred_label, bweight_fpred

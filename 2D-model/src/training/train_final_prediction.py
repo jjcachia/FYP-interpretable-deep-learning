@@ -5,7 +5,6 @@ from sklearn.metrics import balanced_accuracy_score, f1_score, precision_score, 
 
 def _train_or_test(model, data_loader, optimizer, device, is_train=True):
     """Perform training or testing steps on given model and data loader."""
-    device='cpu'
     model.to(device)
     if is_train:
         model.train()
@@ -29,7 +28,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
             
             # Forward pass
             outputs = model(X)
-            
+            outputs = torch.sigmoid(outputs)
             # bweight_pred = bweight_pred * slice_weight
                         
             # Compute loss
