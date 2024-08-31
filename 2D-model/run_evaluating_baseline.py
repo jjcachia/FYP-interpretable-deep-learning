@@ -7,6 +7,7 @@ from src.loaders._3D.dataloader import LIDCDataset
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
 from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
+from src.training.train_final_prediction import evaluate_model
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
