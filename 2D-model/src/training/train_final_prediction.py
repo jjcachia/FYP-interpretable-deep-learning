@@ -19,16 +19,16 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
     # Process to handle the context managers for training and testing
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
-        for X, _, _, y, bweight_pred in tqdm(data_loader, leave=False):
+        for X, _, _, y, bweight_pred, slice_weight in tqdm(data_loader, leave=False):
             X, y = X.to(device), y.to(device)
-            bweight_pred = bweight_pred.float().unsqueeze(1).to(device)
+            bweight_pred = bweight_pred.float().unsqueeze(1).to(device), slice_weight.float().to(device)
             y = y.float().unsqueeze(1)
             
             # Forward pass
             outputs = model(X)
             
             # Compute loss
-            loss = torch.nn.functional.binary_cross_entropy(outputs, y, weight = bweight_pred)
+            loss = torch.nn.functional.binary_cross_entropy(outputs, y, weight = bweight_pred)*slice_weight
             total_loss += loss.item()
             
             # Collect data for statistics

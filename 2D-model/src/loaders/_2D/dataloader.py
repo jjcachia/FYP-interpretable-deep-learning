@@ -6,6 +6,8 @@ from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
 import os
+from scipy.stats import norm
+
 
 class LIDCDataset(Dataset):
     def __init__(self, labels_file, transform=None, chosen_chars=None, indeterminate=True, split='train', validation_split=0.10, test_split=0.10):
@@ -75,14 +77,11 @@ class LIDCDataset(Dataset):
         # Extract the number of slices of each nodule and the slice id
         self.labels['nodule_id'] = self.labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
         
+        self.labels = self.labels.copy()
+        
         # Add slice index and total slice count per nodule
         self.labels['slice_index'] = self.labels.groupby('nodule_id').cumcount()
         self.labels['total_slices'] = self.labels.groupby('nodule_id')['slice_index'].transform('max') + 1
-        # 
-        # print(self.labels.columns)
-        # print(self.labels)
-        # print(self.labels['slice_index'])
-        # print(self.labels['total_slices'])
 
     def __len__(self):
         return len(self.labels)
@@ -99,13 +98,20 @@ class LIDCDataset(Dataset):
         # if self.transform:
         #     image = self.transform(image)
         
-        print(self.labels['slice_index'].iloc[idx])
-        print(self.labels['total_slices'].iloc[idx])
+        # Get the weight for the slice
+        num_slices = self.labels['total_slices'].iloc[idx]
+        slice_index = self.labels['slice_index'].iloc[idx]
+        x = np.linspace(0, num_slices-1, num_slices)
+        mean = (num_slices - 1) / 2
+        std_dev = 1.0
+        weights = norm.pdf(x, mean, std_dev)
+        weights = weights / weights.sum()
+        slice_weight = weights[slice_index]
         
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
-        characteristics = self.labels[self.labels.columns[1:-2]]
+        characteristics = self.labels[self.labels.columns[1:-4]]#-2]]
         for char_idx in range(0, self.num_characteristics):
             if self.chosen_chars[char_idx] is False:
                 continue
@@ -121,4 +127,4 @@ class LIDCDataset(Dataset):
         if self.transforms:
             image = self.transforms(image)
             
-        return image, label_chars, bweight_chars, final_pred_label, bweight_fpred
+        return image, label_chars, bweight_chars, final_pred_label, bweight_fpred, slice_weight
