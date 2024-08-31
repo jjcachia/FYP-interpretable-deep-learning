@@ -28,12 +28,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
             # Forward pass
             outputs = model(X)
             
-            print(f"Weights: {bweight_pred}, Slice Weight: {slice_weight}, shape: {bweight_pred.shape}, {slice_weight.shape}")
-            
             bweight_pred = bweight_pred * slice_weight
-            
-            print(f"Weights: {bweight_pred}, shape: {bweight_pred.shape}")
-            
+                        
             # Compute loss
             loss = torch.nn.functional.binary_cross_entropy(outputs, y, weight = bweight_pred)
             total_loss += loss.item()
