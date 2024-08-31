@@ -3,7 +3,7 @@ import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
 from src.utils.helpers import setup_directories, load_model_from_chunks, set_seed
-from src.loaders._2D.dataloader import LIDCDataset
+from src.loaders._3D.dataloader import LIDCDataset
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
 from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
@@ -77,9 +77,9 @@ def main():
     ###################################### Initialize the model ###################################################
     ###############################################################################################################
 
-    if args.model not in MODEL_DICT:
-        raise ValueError(f"Unsupported model name {args.model}")
-    construct_Model = MODEL_DICT[args.model]
+    # if args.model not in MODEL_DICT:
+    #     raise ValueError(f"Unsupported model name {args.model}")
+    # construct_Model = MODEL_DICT[args.model]
     
     # Create the model instance
     # model = construct_Model(backbone_name=args.backbone, weights=args.weights)
