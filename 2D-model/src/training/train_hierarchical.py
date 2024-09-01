@@ -51,7 +51,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             bweights_chars = [b.float().to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
             targets = [t.long().to(device) for t in targets]
-            final_target = final_target.float().unsqueeze(1).to(device)
+            # final_target = final_target.float().unsqueeze(1).to(device)
+            final_target = final_target.long().to(device)
             # bweight = bweight.float().unsqueeze(1).to(device)
             bweight = bweight.float().to(device)
             
@@ -89,7 +90,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             # final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
             # final_preds = final_output.round()
             bweight = bweight[0] # Get the first element of the batch
-            print(bweight, final_target, final_output)
+            # print(bweight, final_target, final_output)
             final_loss = torch.nn.functional.cross_entropy(final_output, final_target, weight=bweight)
             final_preds = final_output.argmax(dim=1)
             
@@ -198,7 +199,8 @@ def evaluate_model(data_loader, model, device):
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
             # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
-            final_target = final_target.float().unsqueeze(1).to(device)
+            # final_target = final_target.float().unsqueeze(1).to(device)
+            final_target = final_target.long().to(device)
             
             final_output, task_outputs = model(X)
             
