@@ -89,6 +89,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             # final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
             # final_preds = final_output.round()
             bweight = bweight[0] # Get the first element of the batch
+            print(bweight, final_target, final_output)
             final_loss = torch.nn.functional.cross_entropy(final_output, final_target, weight=bweight)
             final_preds = final_output.argmax(dim=1)
             
