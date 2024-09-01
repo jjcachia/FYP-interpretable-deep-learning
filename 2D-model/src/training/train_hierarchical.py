@@ -24,7 +24,7 @@ def _adjust_weights(balanced_accuracies, exponent=5, target_sum=5):
     scaled_weights = [w * target_sum for w in normalized_weights]
     return scaled_weights
 
-def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None):
+def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, slice_weight=False):
     model.to(device)
     if is_train:
         model.train()
@@ -51,24 +51,27 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             bweights_chars = [b.float().to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
             targets = [t.long().to(device) for t in targets]
-            # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
             final_target = final_target.float().unsqueeze(1).to(device)
-            bweight = bweight.float().unsqueeze(1).to(device)
-            slice_weight = slice_weight.float().unsqueeze(1).to(device)
+            # bweight = bweight.float().unsqueeze(1).to(device)
+            bweight = bweight.float().to(device)
             
-            bweight_pred = bweight * slice_weight
+            if slice_weight:
+                slice_weight = slice_weight.float().unsqueeze(1).to(device)
+                bweight_pred = bweight * slice_weight
             
             final_output, task_outputs = model(X)
             
             loss = 0
             for i, (task_output, target, bweight_char) in enumerate(zip(task_outputs, targets, bweights_chars)):
-                bweight_char = bweight_char[0][target] # Get the first element of the batch
-                bweight_char = bweight_char * slice_weight
-                
                 # Compute loss for each task
-                # task_loss = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char)
-                task_loss = torch.nn.functional.cross_entropy(task_output, target, reduction='none')
-                task_loss = (task_loss * bweight_char).mean()
+                if slice_weight:
+                    bweight_char = bweight_char[0][target] # Get the first element of the batch
+                    bweight_char = bweight_char * slice_weight
+                    task_loss = torch.nn.functional.cross_entropy(task_output, target, reduction='none')
+                    task_loss = (task_loss * bweight_char).mean()
+                else:
+                    bweight_char = bweight_char[0] # Get the first element of the batch
+                    task_loss = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char)
                 
                 # Multiply the loss by the task weight
                 if task_weights:
@@ -83,11 +86,15 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())   
 
             # Compute loss for final output
-            final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
+            # final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
+            # final_preds = final_output.round()
+            bweight = bweight[0] # Get the first element of the batch
+            final_loss = torch.nn.functional.cross_entropy(final_output, final_target, weight=bweight)
+            final_preds = final_output.argmax(dim=1)
+            
             loss += final_loss
             
             # Compute accuracy for final output
-            final_preds = final_output.round()
             final_targets.extend(final_target.cpu().numpy())
             final_outputs.extend(final_preds.detach().cpu().numpy())
 
@@ -200,7 +207,8 @@ def evaluate_model(data_loader, model, device):
                 final_pred_targets[i].extend(target.cpu().numpy())
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
-            preds = final_output.round()
+            # preds = final_output.round()
+            preds = final_output.argmax(dim=1)
             final_targets.extend(final_target.cpu().numpy())
             final_outputs.extend(preds.detach().cpu().numpy())
             

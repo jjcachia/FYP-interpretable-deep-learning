@@ -130,7 +130,8 @@ class LIDCDataset(Dataset):
             
         # Extract the final prediction label and binary weight
         final_pred_label = self.labels['Malignancy'].iloc[idx]
-        bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
+        # bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
+        bweight_fpred = self.malignancy_weights.iloc[:,0].values
         
         # Apply Data Augmentation to the image
         if self.transforms:
