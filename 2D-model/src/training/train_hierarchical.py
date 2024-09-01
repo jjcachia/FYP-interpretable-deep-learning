@@ -46,8 +46,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     with context:
         for X, targets, bweights_chars, final_target, bweight, slice_weight in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
-            bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
-            # bweights_chars = [b.float().to(device) for b in bweights_chars]
+            # bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
+            bweights_chars = [b.float().to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
             targets = [t.long().to(device) for t in targets]
             # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
@@ -61,13 +61,13 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             
             loss = 0
             for i, (task_output, target, bweight_char) in enumerate(zip(task_outputs, targets, bweights_chars)):
-                # bweight_char = bweight_char[0] # Get the first element of the batch
-                bweight_char = bweight_char * slice_weight
+                bweight_char = bweight_char[0] # Get the first element of the batch
+                # bweight_char = bweight_char * slice_weight
                 
                 # Compute loss for each task
                 # task_loss = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char)
-                task_loss = torch.nn.functional.binary_cross_entropy(task_output, target, reduction='sum')
-                task_loss = (task_loss * bweight_char).mean()
+                task_loss = torch.nn.functional.binary_cross_entropy(task_output, target, reduction='sum', weight=bweight_char)
+                task_loss = (task_loss * slice_weight).mean()
                 
                 # Multiply the loss by the task weight
                 if task_weights:
