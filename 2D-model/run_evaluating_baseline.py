@@ -100,7 +100,7 @@ def main():
     labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
     
     LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0)
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=50, shuffle=False, num_workers=0)
     
     test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
     print(f"Test Metrics:")
@@ -113,7 +113,7 @@ def main():
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
     
     # Evaluate the model on each slice
-    test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
