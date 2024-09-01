@@ -165,8 +165,8 @@ def evaluate_model(data_loader, model, device):
     final_pred_targets = [[] for _ in range(5)]
     final_pred_outputs = [[] for _ in range(5)]
     
-    final_pred_targets = []
-    final_pred_outputs = []
+    final_targets = []
+    final_outputs = []
     
     confusion_matrix = np.zeros((2, 2), dtype=int)
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
@@ -185,8 +185,8 @@ def evaluate_model(data_loader, model, device):
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
             preds = final_output.round()
-            final_pred_targets.extend(final_target.cpu().numpy())
-            final_pred_outputs.extend(preds.detach().cpu().numpy())
+            final_targets.extend(final_target.cpu().numpy())
+            final_outputs.extend(preds.detach().cpu().numpy())
             
             # for i, l in enumerate(final_target.int()):
             #     confusion_matrix[l.item(), int(preds[i].item())] += 1
