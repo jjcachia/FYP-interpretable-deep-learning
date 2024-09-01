@@ -114,7 +114,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
         return metrics
     elif is_train is False:
         # Adjust task weights based on the validation balanced accuracies
-        task_weights = _adjust_weights(task_balanced_accuracies, exponent=5, target_sum=5)
+        task_weights = _adjust_weights(task_balanced_accuracies, exponent=2, target_sum=5)
         return metrics, task_weights
 
 def train_step(model, data_loader, optimizer, device, task_weights=None):
