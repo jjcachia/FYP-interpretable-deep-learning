@@ -4,7 +4,7 @@ import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn a
 import numpy as np
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
-from src.loaders._2D.dataloader import LIDCDataset
+from src.loaders._2_5D.dataloader import LIDCDataset
 # from src.training.train_final_prediction import train_step, test_step, evaluate_model
 from src.training.train_hierarchical import train_step, test_step, evaluate_model, evaluate_model_by_nodule
 from src.models.base_model import construct_baseModel
