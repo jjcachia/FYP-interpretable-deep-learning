@@ -30,12 +30,14 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     else:
         model.eval()
     
+    num_tasks = model.num_tasks
+    
     total_loss = 0
     
-    task_losses = [0] * 5  # Assuming 5 tasks
+    task_losses = [0] * num_tasks  # Assuming 5 tasks
 
-    final_pred_targets = [[] for _ in range(5)]
-    final_pred_outputs = [[] for _ in range(5)]
+    final_pred_targets = [[] for _ in range(num_tasks)]
+    final_pred_outputs = [[] for _ in range(num_tasks)]
     
     final_targets = []  # For calculating balanced accuracy for final output
     final_outputs = []  # For calculating balanced accuracy for final output
@@ -47,7 +49,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
             targets = [t.long().to(device) for t in targets]
-            targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
+            # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
             final_target = final_target.float().unsqueeze(1).to(device)
             bweight = bweight.float().unsqueeze(1).to(device)
             

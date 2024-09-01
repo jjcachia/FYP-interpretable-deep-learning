@@ -25,8 +25,11 @@ BACKBONE_DICT = {
 class BaselineModel(nn.Module):
     def __init__(self, backbone, weights, hidden_layers, num_tasks, num_classes):
         super(BaselineModel, self).__init__()
+        self.num_tasks = num_tasks
+        self.num_classes = num_classes
+        
         self.backbone = backbone(weights=weights)
-    
+        
         out_C, out_H, out_W = self.backbone.get_output_dims()
         
         self.task_specific_layers = nn.ModuleList([
@@ -73,12 +76,9 @@ class BaselineModel(nn.Module):
     
 def construct_baselineModel(backbone_name='denseNet121', 
                             weights='DEFAULT', 
-                            common_channel_size=256, 
-                            output_channel_size=256, 
-                            output_feature_size=25, 
                             hidden_layers=256, 
                             num_tasks=5,
-                            num_classes=5):
+                            num_classes=3):
     """
     Constructs a Hierarchical Multi-Task Learning Baseline Model.
 

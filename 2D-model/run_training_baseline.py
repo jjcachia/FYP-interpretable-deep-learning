@@ -133,7 +133,7 @@ def main():
     if args.model == 'base':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     else:
-        optimizer_specs = [{'params': model.backbone.parameters(), 'lr': args.learning_rate/2},
+        optimizer_specs = [{'params': model.backbone.parameters(), 'lr': args.learning_rate/10},
                             {'params': model.task_specific_layers.parameters(), 'lr': args.learning_rate},
                             {'params': model.task_specific_classifier.parameters(), 'lr': args.learning_rate},
                             {'params': model.final_classifier.parameters(), 'lr': args.learning_rate}]

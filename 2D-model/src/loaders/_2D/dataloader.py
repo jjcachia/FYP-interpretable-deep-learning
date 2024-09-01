@@ -16,8 +16,9 @@ class LIDCDataset(Dataset):
         self.chosen_chars = chosen_chars
 
         # Preprocess the labels
-        # all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         all_labels.drop(columns=['Internalstructure'], inplace=True)
+        
+        # all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         # all_labels['Calcification'] = all_labels['Calcification'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1})
         # all_labels['Sphericity'] = all_labels['Sphericity'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         # all_labels['Margin'] = all_labels['Margin'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
@@ -25,6 +26,16 @@ class LIDCDataset(Dataset):
         # all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
         # all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 1})
         # all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 0, 3: 1, 4: 1, 5: 1})
+
+        all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+        all_labels['Calcification'] = all_labels['Calcification'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1}) #drop
+        all_labels['Sphericity'] = all_labels['Sphericity'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 2})
+        all_labels['Margin'] = all_labels['Margin'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 2})
+        all_labels['Lobulation'] = all_labels['Lobulation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1}) #drop
+        all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1}) #drop
+        all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 2})
+        all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
+        
         if indeterminate:
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
         else:
