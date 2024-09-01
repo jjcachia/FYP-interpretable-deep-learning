@@ -219,11 +219,11 @@ def evaluate_model(data_loader, model, device):
                 confusion_matrix[l.item(), int(preds[i].item())] += 1
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
-    final_f1 = f1_score(final_targets, final_outputs)
-    final_precision = precision_score(final_targets, final_outputs)
-    final_recall = recall_score(final_targets, final_outputs)
-    final_auc = roc_auc_score(final_targets, final_outputs)
+    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs, average='macro')
+    final_f1 = f1_score(final_targets, final_outputs, average='macro')
+    final_precision = precision_score(final_targets, final_outputs, average='macro')
+    final_recall = recall_score(final_targets, final_outputs, average='macro')
+    final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
     
     # return the metrics as a dictionary
     metrics = {'task_balanced_accuracies': task_balanced_accuracies,
