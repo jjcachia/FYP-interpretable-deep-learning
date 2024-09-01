@@ -77,7 +77,7 @@ def construct_baselineModel(backbone_name='denseNet121',
                             output_channel_size=256, 
                             output_feature_size=25, 
                             hidden_layers=256, 
-                            num_tasks=5
+                            num_tasks=5,
                             num_classes=5):
     """
     Constructs a Hierarchical Multi-Task Learning Baseline Model.
@@ -105,6 +105,6 @@ def construct_baselineModel(backbone_name='denseNet121',
     return BaselineModel(backbone=backbone, 
                          weights=weights,
                          hidden_layers=hidden_layers, 
-                         num_tasks=num_tasks
+                         num_tasks=num_tasks,
                          num_classes=num_classes)
 
