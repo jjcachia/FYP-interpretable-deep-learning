@@ -39,6 +39,8 @@ class LIDCDataset(Dataset):
         if indeterminate:
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
         else:
+            # all_labels = all_labels[all_labels['Malignancy'] != 3]
+            # all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 4: 1, 5: 1})
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         
         # Extract patient identifiers from the image directory paths
@@ -99,12 +101,7 @@ class LIDCDataset(Dataset):
         array = np.load(path)
         array = np.expand_dims(array, axis=0) # Convert to 1-channel image
         array = np.repeat(array, 3, axis=0) # Convert to 3-channel image
-        image = torch.from_numpy(array)
-        # image = Image.fromarray(array)
-        
-        # Apply Preprocessing to the image
-        # if self.transform:
-        #     image = self.transform(image)
+        image = torch.from_numpy(array)        
         
         # Get the weight for the slice
         num_slices = self.labels['total_slices'].iloc[idx]
@@ -130,8 +127,8 @@ class LIDCDataset(Dataset):
             
         # Extract the final prediction label and binary weight
         final_pred_label = self.labels['Malignancy'].iloc[idx]
-        # bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
-        bweight_fpred = self.malignancy_weights.iloc[:,0].values
+        bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
+        # bweight_fpred = self.malignancy_weights.iloc[:,0].values #TODO: Uncomment this line and comment the above line for multi-class classification
         
         # Apply Data Augmentation to the image
         if self.transforms:

@@ -24,7 +24,7 @@ def _adjust_weights(balanced_accuracies, exponent=5, target_sum=5):
     scaled_weights = [w * target_sum for w in normalized_weights]
     return scaled_weights
 
-def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, use_slice_weights=False):
+def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, use_slice_weights=False, indeterminate=False):
     model.to(device)
     if is_train:
         model.train()
@@ -51,10 +51,13 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             bweights_chars = [b.float().to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
             targets = [t.long().to(device) for t in targets]
-            # final_target = final_target.float().unsqueeze(1).to(device)
-            final_target = final_target.long().to(device)
-            # bweight = bweight.float().unsqueeze(1).to(device)
-            bweight = bweight.float().to(device)
+            
+            if indeterminate:
+                final_target = final_target.long().to(device)
+                bweight = bweight.float().to(device)
+            else:
+                final_target = final_target.float().unsqueeze(1).to(device)
+                bweight = bweight.float().unsqueeze(1).to(device)
             
             if use_slice_weights:
                 slice_weight = slice_weight.float().unsqueeze(1).to(device)
@@ -87,12 +90,13 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())   
 
             # Compute loss for final output
-            # final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
-            # final_preds = final_output.round()
-            bweight = bweight[0] # Get the first element of the batch
-            # print(bweight, final_target, final_output)
-            final_loss = torch.nn.functional.cross_entropy(final_output, final_target, weight=bweight)
-            final_preds = final_output.argmax(dim=1)
+            if indeterminate:
+                bweight = bweight[0]
+                final_loss = torch.nn.functional.cross_entropy(final_output, final_target, weight=bweight)
+                final_preds = final_output.argmax(dim=1)
+            else:
+                final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
+                final_preds = final_output.round()
             
             loss += final_loss
             
@@ -111,10 +115,16 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     task_losses = [task_loss / len(data_loader) for task_loss in task_losses]
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
-    final_f1 = f1_score(final_targets, final_outputs, average='macro')
-    final_precision = precision_score(final_targets, final_outputs, average='macro')
-    final_recall = recall_score(final_targets, final_outputs, average='macro')
-    # final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
+    if indeterminate:
+        final_f1 = f1_score(final_targets, final_outputs, average='macro')
+        final_precision = precision_score(final_targets, final_outputs, average='macro')
+        final_recall = recall_score(final_targets, final_outputs, average='macro')
+        final_auc = 0 
+    else:
+        final_f1 = f1_score(final_targets, final_outputs)
+        final_precision = precision_score(final_targets, final_outputs)
+        final_recall = recall_score(final_targets, final_outputs)
+        final_auc = roc_auc_score(final_targets, final_outputs)
     
     # return the metrics as a dictionary
     metrics = {'average_loss': average_loss, 
@@ -124,7 +134,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                'final_f1': final_f1,
                'final_precision': final_precision,
                'final_recall': final_recall
-               # 'final_auc': final_auc,
+               'final_auc': final_auc,
             }
     
     # if is_train:
@@ -193,14 +203,14 @@ def evaluate_model(data_loader, model, device):
     final_targets = []
     final_outputs = []
     
-    confusion_matrix = np.zeros((3, 3), dtype=int)
+    confusion_matrix = np.zeros((2, 2), dtype=int) # TODO: UNCOMMENT FOR 3-CLASS CLASSIFICATION
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
         for X, targets, _, final_target, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
             # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
-            # final_target = final_target.float().unsqueeze(1).to(device)
-            final_target = final_target.long().to(device)
+            final_target = final_target.float().unsqueeze(1).to(device)
+            # final_target = final_target.long().to(device) # TODO: UNCOMMENT FOR 3-CLASS CLASSIFICATION
             
             final_output, task_outputs = model(X)
             
@@ -210,8 +220,8 @@ def evaluate_model(data_loader, model, device):
                 final_pred_targets[i].extend(target.cpu().numpy())
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
-            # preds = final_output.round()
-            preds = final_output.argmax(dim=1)
+            preds = final_output.round()
+            # preds = final_output.argmax(dim=1) # TODO: UNCOMMENT FOR 3-CLASS CLASSIFICATION
             final_targets.extend(final_target.cpu().numpy())
             final_outputs.extend(preds.detach().cpu().numpy())
             
@@ -220,18 +230,18 @@ def evaluate_model(data_loader, model, device):
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
-    final_f1 = f1_score(final_targets, final_outputs, average='macro')
-    final_precision = precision_score(final_targets, final_outputs, average='macro')
-    final_recall = recall_score(final_targets, final_outputs, average='macro')
-    # final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
+    final_f1 = f1_score(final_targets, final_outputs)
+    final_precision = precision_score(final_targets, final_outputs)
+    final_recall = recall_score(final_targets, final_outputs)
+    final_auc = roc_auc_score(final_targets, final_outputs)
     
     # return the metrics as a dictionary
     metrics = {'task_balanced_accuracies': task_balanced_accuracies,
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
                'final_precision': final_precision,
-               'final_recall': final_recall
-               #'final_auc': final_auc,
+               'final_recall': final_recall,
+               'final_auc': final_auc
             }
     
     return metrics, confusion_matrix
