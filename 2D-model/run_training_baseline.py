@@ -1,6 +1,7 @@
 import os, time, gc, argparse, shutil
 import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
+import numpy as np
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
 from src.loaders._2D.dataloader import LIDCDataset
@@ -129,7 +130,15 @@ def main():
         # Create the model instance
         model = construct_Model(backbone_name=args.backbone, weights=args.weights)
     
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    if args.model == 'base':
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    else:
+        optimizer_specs = [{'params': model.backbone.parameters(), 'lr': args.learning_rate/10},
+                            {'params': model.task_specific_layers.parameters(), 'lr': args.learning_rate},
+                            {'params': model.task_specific_classifier.parameters(), 'lr': args.learning_rate},
+                            {'params': model.final_classifier.parameters(), 'lr': args.learning_rate}]
+        optimizer = torch.optim.Adam(optimizer_specs)
+    
 
     print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     

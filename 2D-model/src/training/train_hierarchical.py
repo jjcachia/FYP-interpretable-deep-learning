@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch
 from sklearn.metrics import balanced_accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+import numpy as np
 
 def _adjust_weights(balanced_accuracies, exponent=5, target_sum=2):
     """
