@@ -23,7 +23,7 @@ BACKBONE_DICT = {
 ############################################################################################################################################################################
 
 class BaselineModel(nn.Module):
-    def __init__(self, backbone, weights, hidden_layers, num_tasks):
+    def __init__(self, backbone, weights, hidden_layers, num_tasks, num_classes):
         super(BaselineModel, self).__init__()
         self.backbone = backbone(weights=weights)
     
@@ -40,7 +40,7 @@ class BaselineModel(nn.Module):
         ])
         
         self.task_specific_classifier = nn.ModuleList([
-            nn.Linear(hidden_layers, 5) for _ in range(num_tasks)
+            nn.Linear(hidden_layers, num_classes) for _ in range(num_tasks)
         ])
         
         self.final_classifier = nn.Sequential(
@@ -77,7 +77,8 @@ def construct_baselineModel(backbone_name='denseNet121',
                             output_channel_size=256, 
                             output_feature_size=25, 
                             hidden_layers=256, 
-                            num_tasks=5):
+                            num_tasks=5
+                            num_classes=5):
     """
     Constructs a Hierarchical Multi-Task Learning Baseline Model.
 
@@ -104,5 +105,6 @@ def construct_baselineModel(backbone_name='denseNet121',
     return BaselineModel(backbone=backbone, 
                          weights=weights,
                          hidden_layers=hidden_layers, 
-                         num_tasks=num_tasks)
+                         num_tasks=num_tasks
+                         num_classes=num_classes)
 
