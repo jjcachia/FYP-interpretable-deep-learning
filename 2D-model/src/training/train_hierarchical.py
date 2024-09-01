@@ -133,8 +133,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
                'final_precision': final_precision,
-               'final_recall': final_recall
-               'final_auc': final_auc,
+               'final_recall': final_recall,
+               'final_auc': final_auc
             }
     
     # if is_train:
