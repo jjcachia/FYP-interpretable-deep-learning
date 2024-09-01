@@ -185,7 +185,7 @@ def evaluate_model(data_loader, model, device):
     
     confusion_matrix = np.zeros((2, 2), dtype=int)
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
-        for X, targets, _, final_target, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
+        for X, targets, _, final_target, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
             # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed

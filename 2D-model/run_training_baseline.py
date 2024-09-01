@@ -160,7 +160,7 @@ def main():
     task_weights = None
     for epoch in range(epochs):
         # Print header
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t\n" + "-"*100)# + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" 
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t\n" + "-"*100)# + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" +
         # Train and test the model batch by batch
         epoch_start = time.time()  # Start time of the current epoch
 
@@ -210,7 +210,7 @@ def main():
     
     # Group slices by nodule and evaluate the model on each nodule
     # test set
-    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
     
     # Evaluate the model on the test set

@@ -3,15 +3,16 @@ import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
 from src.utils.helpers import setup_directories, load_model_from_chunks, set_seed
-from src.loaders._3D.dataloader import LIDCDataset
+from src.loaders._2D.dataloader import LIDCDataset
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
-from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
+from src.evaluation.evaluating import LIDCEvaluationDataset
 from src.training.train_final_prediction import evaluate_model
+from src.training.train_hierarchical import evaluate_model, evaluate_model_by_nodule
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
-CHOSEN_CHARS = [False, True, False, True, True, False, False, True]
+CHOSEN_CHARS = [True, True, False, True, True, False, False, True]
 
 DEFAULT_BATCH_SIZE = 25
 DEFAULT_EPOCHS = 100
@@ -27,7 +28,7 @@ def parse_args():
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     
     parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
-    parser.add_argument('--model', type=str, default='base', help='Model to train')
+    parser.add_argument('--model', type=str, default='baseline', help='Model to train')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     
     parser.add_argument('--img_channels', type=int, default=IMG_CHANNELS, help='Number of channels in the input image')
@@ -78,16 +79,16 @@ def main():
     ###################################### Initialize the model ###################################################
     ###############################################################################################################
 
-    # if args.model not in MODEL_DICT:
-    #     raise ValueError(f"Unsupported model name {args.model}")
-    # construct_Model = MODEL_DICT[args.model]
+    if args.model not in MODEL_DICT:
+        raise ValueError(f"Unsupported model name {args.model}")
+    construct_Model = MODEL_DICT[args.model]
     
     # Create the model instance
-    # model = construct_Model(backbone_name=args.backbone, weights=args.weights)
-    from efficientnet_pytorch_3d import EfficientNet3D #TODO: REMOVE IF NOT 3D
-    model = EfficientNet3D.from_name("efficientnet-b0", in_channels=1, override_params={'num_classes': 1})
+    model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    # from efficientnet_pytorch_3d import EfficientNet3D #TODO: REMOVE IF NOT 3D
+    # model = EfficientNet3D.from_name("efficientnet-b0", in_channels=1, override_params={'num_classes': 1})
+    # model.to(device)
     model.to(device)
-    
     ###############################################################################################################
     ####################################### Evaluate the model ####################################################
     ###############################################################################################################
@@ -95,10 +96,21 @@ def main():
     
     model.load_state_dict(load_model_from_chunks(best_model_path))
     
-    # Evaluate the model on the test set
-    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
+    
     LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0)
+    
+    test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)  
+    
+    # Evaluate the model on the test set
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), chosen_chars=CHOSEN_CHARS)
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) 
     
     # Evaluate the model on each slice
     test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
