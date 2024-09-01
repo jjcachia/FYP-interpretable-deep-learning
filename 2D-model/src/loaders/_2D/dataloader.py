@@ -126,7 +126,7 @@ class LIDCDataset(Dataset):
                 continue
             label = characteristics.iloc[idx, char_idx]
             label_chars.append(label)
-            bweight_chars.append(self.char_weights.iloc[:, char_idx])
+            bweight_chars.append(self.char_weights.iloc[:, char_idx].values)
             
         # Extract the final prediction label and binary weight
         final_pred_label = self.labels['Malignancy'].iloc[idx]
