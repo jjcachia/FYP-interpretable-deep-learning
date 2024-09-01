@@ -49,7 +49,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             # bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
             bweights_chars = [b.float().to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
-            targets = [t.long().to(device).unsqueeze(1) for t in targets]
+            targets = [t.long().to(device) for t in targets]
             # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
             final_target = final_target.float().unsqueeze(1).to(device)
             bweight = bweight.float().unsqueeze(1).to(device)
@@ -66,11 +66,10 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                 
                 # Compute loss for each task
                 # task_loss = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char)
-                print(bweight_char)
-                task_loss = torch.nn.functional.binary_cross_entropy(task_output, target, reduction='sum', weight=bweight_char)
-                print(task_loss, slice_weight)
+                task_loss = torch.nn.functional.binary_cross_entropy(task_output, target, reduction='none', weight=bweight_char)
+                print(task_loss)
                 task_loss = (task_loss * slice_weight).mean()
-                
+                print(task_loss)
                 # Multiply the loss by the task weight
                 if task_weights:
                     task_loss =  task_loss * task_weights[i]
