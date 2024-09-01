@@ -175,7 +175,7 @@ def evaluate_model(data_loader, model, device):
         for X, targets, _, final_target, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
-            targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
+            # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
             final_target = final_target.float().unsqueeze(1).to(device)
             
             final_output, task_outputs = model(X)
