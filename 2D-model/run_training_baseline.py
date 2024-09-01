@@ -155,9 +155,10 @@ def main():
     start_time = time.time()  # Record the start time of the entire training
     max_val_bacc = float(0)
     # min_val_loss = float('inf')
+    task_weights = [1.0] * model.num_tasks
     for epoch in range(epochs):
         # Print header
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\n" + "-"*100)
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)
         # Train and test the model batch by batch
         epoch_start = time.time()  # Start time of the current epoch
 
@@ -165,13 +166,15 @@ def main():
         train_metrics = train_step(data_loader=train_dataloader, 
                                     model=model, 
                                     optimizer=optimizer,
-                                    device=device)
+                                    device=device,
+                                    task_weights=task_weights)
         all_train_metrics.append(train_metrics)  
         
         # Testing step
-        test_metrics = test_step(data_loader=val_dataloader,
-                                model=model,
-                                device=device)
+        test_metrics, task_weights = test_step(data_loader=val_dataloader,
+                                               model=model,
+                                               device=device,
+                                               task_weights=task_weights)
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased

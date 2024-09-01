@@ -3,7 +3,7 @@ import torch
 from sklearn.metrics import balanced_accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 import numpy as np
 
-def _adjust_weights(balanced_accuracies, exponent=5, target_sum=2):
+def _adjust_weights(balanced_accuracies, exponent=5, target_sum=5):
     """
     Adjusts the weights based on the balanced accuracies.
 
@@ -61,8 +61,11 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                 bweight_char = bweight_char[0] # Get the first element of the batch
                 # Compute loss for each task
                 task_loss = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char)
+                
+                # Multiply the loss by the task weight
                 if task_weights:
-                    task_loss *= task_weights[i]
+                    task_loss =  task_loss * task_weights[i]
+                    
                 task_losses[i] += task_loss.item()
                 loss += task_loss
 
@@ -108,11 +111,11 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             }
     
     if is_train:
-        # Adjust task weights based on the latest balanced accuracies
-        task_weights = _adjust_weights(task_balanced_accuracies, exponent=5, target_sum=2)
-        return metrics, task_weights
+        return metrics
     elif is_train is False:
-        return metrics 
+        # Adjust task weights based on the validation balanced accuracies
+        task_weights = _adjust_weights(task_balanced_accuracies, exponent=5, target_sum=5)
+        return metrics, task_weights
 
 def train_step(model, data_loader, optimizer, device, task_weights=None):
     """
@@ -128,7 +131,7 @@ def train_step(model, data_loader, optimizer, device, task_weights=None):
     Returns:
         tuple: A tuple containing the training metrics and updated task weights.
     """
-    train_metrics, task_weights = _train_or_test(
+    train_metrics = _train_or_test(
         model, data_loader, optimizer, device, is_train=True, task_weights=task_weights
     )
     print(f"Train loss: {train_metrics['average_loss']:.5f}")
@@ -136,7 +139,7 @@ def train_step(model, data_loader, optimizer, device, task_weights=None):
         print(f"Task {i} - Loss: {loss:.2f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Train Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, Train F1: {train_metrics['final_f1']*100:.2f}%, Recall: {train_metrics['final_recall']*100:.2f}%, Precision: {train_metrics['final_precision']*100:.2f}%")
-    return train_metrics, task_weights
+    return train_metrics
 
 
 def test_step(model, data_loader, device, task_weights=None):
@@ -152,7 +155,7 @@ def test_step(model, data_loader, device, task_weights=None):
         dict: A dictionary containing the evaluation metrics.
     """
     # Unpack the return values from _train_or_test function including the final output metrics
-    test_metrics = _train_or_test(
+    test_metrics, task_weights = _train_or_test(
         model, data_loader, None, device, is_train=False, task_weights=task_weights
     )
     print(f"Val loss: {test_metrics['average_loss']:.5f}")
@@ -160,7 +163,7 @@ def test_step(model, data_loader, device, task_weights=None):
         print(f"Task {i} - Loss: {loss:.2f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1: {test_metrics['final_f1']*100:.2f}%, Recall: {test_metrics['final_recall']*100:.2f}%, Precision: {test_metrics['final_precision']*100:.2f}%")
-    return test_metrics
+    return test_metrics, task_weights
 
 # Function to evaluate the model on the test set
 def evaluate_model(data_loader, model, device):
