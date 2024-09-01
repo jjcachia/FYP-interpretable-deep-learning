@@ -85,7 +85,6 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     average_loss = total_loss / len(data_loader)
     task_losses = [task_loss / len(data_loader) for task_loss in task_losses]
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    task_f1_scores = [f1_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
     final_f1 = f1_score(final_targets, final_outputs)
     final_precision = precision_score(final_targets, final_outputs)
@@ -96,7 +95,6 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     metrics = {'average_loss': average_loss, 
                'task_losses': task_losses,
                'task_balanced_accuracies': task_balanced_accuracies,
-               'task_f1_scores': task_f1_scores,
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
                'final_precision': final_precision,
@@ -129,8 +127,8 @@ def train_step(model, data_loader, optimizer, device, task_weights=None):
         model, data_loader, optimizer, device, is_train=True, task_weights=task_weights
     )
     print(f"Train loss: {train_metrics['average_loss']:.5f}")
-    for i, (loss, bal_acc, f1) in enumerate(zip(train_metrics['task_losses'], train_metrics['task_balanced_accuracies'], train_metrics['task_f1_scores']), 1):
-        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%, Train F1: {f1*100:.2f}%")
+    for i, (loss, bal_acc) in enumerate(zip(train_metrics['task_losses'], train_metrics['task_balanced_accuracies']), 1):
+        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Train Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, Train F1: {train_metrics['final_f1']*100:.2f}%, Recall: {train_metrics['final_recall']*100:.2f}%, Precision: {train_metrics['final_precision']*100:.2f}%")
     return train_metrics, task_weights
@@ -153,8 +151,8 @@ def test_step(model, data_loader, device, task_weights=None):
         model, data_loader, None, device, is_train=False, task_weights=task_weights
     )
     print(f"Val loss: {test_metrics['average_loss']:.5f}")
-    for i, (loss, bal_acc, f1) in enumerate(zip(test_metrics['task_losses'], test_metrics['task_balanced_accuracies'], test_metrics['task_f1_scores']), 1):
-        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%, Train F1: {f1*100:.2f}%")
+    for i, (loss, bal_acc) in enumerate(zip(test_metrics['task_losses'], test_metrics['task_balanced_accuracies']), 1):
+        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1: {test_metrics['final_f1']*100:.2f}%, Recall: {test_metrics['final_recall']*100:.2f}%, Precision: {test_metrics['final_precision']*100:.2f}%")
     return test_metrics
@@ -192,7 +190,6 @@ def evaluate_model(data_loader, model, device):
                 confusion_matrix[l.item(), int(preds[i].item())] += 1
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    task_f1_scores = [f1_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
     final_f1 = f1_score(final_targets, final_outputs)
     final_precision = precision_score(final_targets, final_outputs)
@@ -201,7 +198,6 @@ def evaluate_model(data_loader, model, device):
     
     # return the metrics as a dictionary
     metrics = {'task_balanced_accuracies': task_balanced_accuracies,
-               'task_f1_scores': task_f1_scores,
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
                'final_precision': final_precision,
