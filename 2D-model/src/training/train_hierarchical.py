@@ -187,8 +187,8 @@ def evaluate_model(data_loader, model, device):
             final_pred_targets.extend(final_target.cpu().numpy())
             final_pred_outputs.extend(preds.detach().cpu().numpy())
             
-            for i, l in enumerate(final_target.int()):
-                confusion_matrix[l.item(), int(preds[i].item())] += 1
+            # for i, l in enumerate(final_target.int()):
+            #     confusion_matrix[l.item(), int(preds[i].item())] += 1
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
