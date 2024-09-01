@@ -177,7 +177,7 @@ def main():
     print(f"Total training time: {total_time:.2f} seconds\n")  # Print the total training time
 
     save_metrics_to_csv(all_train_metrics, all_test_metrics, metrics_path)  # Save metrics to a CSV file
-    plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path)  # Plot and save the loss
+    # plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path)  # Plot and save the loss
     
     ###############################################################################################################
     ####################################### Evaluate the model ####################################################
