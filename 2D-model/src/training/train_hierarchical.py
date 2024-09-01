@@ -250,7 +250,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
 
                 if mode == "median":
                     # Calculate the median prediction for the nodule
-                    task_output = torch.median(task_output, dim=0)[0]
+                    task_output = torch.median(task_output, dim=0)[0].unsqueeze(0)
 
                 preds = task_output.argmax()
                 print(preds, task_label, preds.shape, task_label.shape)
