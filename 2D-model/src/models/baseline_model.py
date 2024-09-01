@@ -51,7 +51,7 @@ class BaselineModel(nn.Module):
             nn.BatchNorm1d(hidden_layers),
             nn.ReLU(),
             nn.Dropout(0.1), # 0.2
-            nn.Linear(hidden_layers, 3)
+            nn.Linear(hidden_layers, 1)
         )
         
     def forward(self, x):
@@ -69,8 +69,8 @@ class BaselineModel(nn.Module):
         task_outputs = [self.task_specific_classifier[i](intermediate_outputs[i]) for i in range(len(intermediate_outputs))]
         
         # Final Malignancy Prediction
-        # final_output = torch.sigmoid(self.final_classifier(concatenated_outputs))
-        final_output = self.final_classifier(concatenated_outputs)
+        final_output = torch.sigmoid(self.final_classifier(concatenated_outputs))
+        # final_output = self.final_classifier(concatenated_outputs)
         
         return final_output, task_outputs
     
