@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from src.models.backbone_models import denseFPN_121, denseFPN_201, efficientFPN_v2_s, efficientDecoder_v2_s
+from src.models.backbone_models import denseNet121, denseNet169, denseNet201, resNet34, resNet152, vgg16, vgg19, denseFPN_121, denseFPN_201, efficientFPN_v2_s
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
