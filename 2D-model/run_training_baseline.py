@@ -4,7 +4,8 @@ import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn a
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
 from src.loaders._3D.dataloader import LIDCDataset
-from src.training.train_final_prediction import train_step, test_step, evaluate_model
+# from src.training.train_final_prediction import train_step, test_step, evaluate_model
+from src.training.train_hierarchical import train_step, test_step, evaluate_model
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
 from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
@@ -12,7 +13,7 @@ from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_n
 
 IMG_CHANNELS = 3
 IMG_SIZE = 100
-CHOSEN_CHARS = [False, True, False, True, True, False, False, True]
+CHOSEN_CHARS = [True, True, False, True, True, False, False, True]
 
 DEFAULT_BATCH_SIZE = 25
 DEFAULT_EPOCHS = 100
@@ -28,7 +29,7 @@ def parse_args():
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     
     parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
-    parser.add_argument('--model', type=str, default='base', help='Model to train')
+    parser.add_argument('--model', type=str, default='baseline', help='Model to train')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     
     parser.add_argument('--img_channels', type=int, default=IMG_CHANNELS, help='Number of channels in the input image')
@@ -86,7 +87,7 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
-    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed-central-slices.csv')
     
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
@@ -132,13 +133,6 @@ def main():
 
     print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     
-    # Pass dummy data through the model to check the output size
-    model.eval()
-    with torch.no_grad():
-        print(f"Input Shape: {batch_images[0].shape}")
-        output = model(batch_images[0])
-        print(f"Output Shape: {output.shape}")
-    model.train()
     
     ###############################################################################################################
     ####################################### Training the model ####################################################

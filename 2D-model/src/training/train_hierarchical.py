@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import torch
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 
 def _adjust_weights(balanced_accuracies, exponent=5, target_sum=2):
     """
@@ -32,13 +32,10 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     total_loss = 0
     
     task_losses = [0] * 5  # Assuming 5 tasks
-    total_correct = [0] * 5  # For tasks
-    total_samples = [0] * 5  # For tasks
+
     final_pred_targets = [[] for _ in range(5)]
     final_pred_outputs = [[] for _ in range(5)]
     
-    final_correct = 0  # For final output
-    final_samples = 0  # For final output
     final_targets = []  # For calculating balanced accuracy for final output
     final_outputs = []  # For calculating balanced accuracy for final output
     
@@ -56,27 +53,23 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             loss = 0
             for i, (task_output, target, bweight_char) in enumerate(zip(task_outputs, targets, bweights_chars)):
                 # Compute loss for each task
-                task_loss = torch.nn.functional.binary_cross_entropy(task_output, target, weight=bweight_char)
+                torch.nn.functional.cross_entropy(task_output, target)# , weight=bweight_char)
                 if task_weights:
                     task_loss *= task_weights[i]
                 task_losses[i] += task_loss.item()
                 loss += task_loss
 
                 # Compute accuracy for each task
-                preds = task_output.round()
-                total_correct[i] += (preds == target).sum().item()
-                total_samples[i] += target.size(0)
-                
-                # Collect data for balanced accuracy for each task
+                preds = task_output.argmax(dim=1)
                 final_pred_targets[i].extend(target.cpu().numpy())
-                final_pred_outputs[i].extend(preds.detach().cpu().numpy())
+                final_pred_outputs[i].extend(preds.detach().cpu().numpy())   
 
             # Compute loss for final output
             final_loss = torch.nn.functional.binary_cross_entropy(final_output, final_target, weight=bweight)
             loss += final_loss
+            
+            # Compute accuracy for final output
             final_preds = final_output.round()
-            final_correct += (final_preds == final_target).sum().item()
-            final_samples += final_target.size(0)
             final_targets.extend(final_target.cpu().numpy())
             final_outputs.extend(final_preds.detach().cpu().numpy())
 
@@ -88,17 +81,26 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                 optimizer.step()
 
     average_loss = total_loss / len(data_loader)
-    task_accuracies = [correct / samples for correct, samples in zip(total_correct, total_samples)]
+    task_losses = [task_loss / len(data_loader) for task_loss in task_losses]
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    final_accuracy = final_correct / final_samples
+    task_f1_scores = [f1_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
+    final_f1 = f1_score(final_targets, final_outputs)
+    final_precision = precision_score(final_targets, final_outputs)
+    final_recall = recall_score(final_targets, final_outputs)
+    final_auc = roc_auc_score(final_targets, final_outputs)
     
     # return the metrics as a dictionary
     metrics = {'average_loss': average_loss, 
-               'task_accuracies': task_accuracies, 
-               'task_balanced_accuracies': task_balanced_accuracies, 
-               'final_accuracy': final_accuracy, 
-               'final_balanced_accuracy': final_balanced_accuracy }
+               'task_losses': task_losses,
+               'task_balanced_accuracies': task_balanced_accuracies,
+               'task_f1_scores': task_f1_scores,
+               'final_balanced_accuracy': final_balanced_accuracy,
+               'final_f1': final_f1,
+               'final_precision': final_precision,
+               'final_recall': final_recall,
+               'final_auc': final_auc,
+            }
     
     if is_train:
         # Adjust task weights based on the latest balanced accuracies
@@ -107,7 +109,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     elif is_train is False:
         return metrics 
 
-def train_step(model, data_loader, optimizer, device, task_weights):
+def train_step(model, data_loader, optimizer, device, task_weights=None):
     """
     Train the model for one epoch.
 
@@ -125,14 +127,14 @@ def train_step(model, data_loader, optimizer, device, task_weights):
         model, data_loader, optimizer, device, is_train=True, task_weights=task_weights
     )
     print(f"Train loss: {train_metrics['average_loss']:.5f}")
-    for i, (acc, bal_acc) in enumerate(zip(train_metrics['task_accuracies'], train_metrics['task_balanced_accuracies']), 1):
-        print(f"Task {i} - Train Accuracy: {acc*100:.2f}%, Train Balanced Accuracy: {bal_acc*100:.2f}%")
+    for i, (loss, bal_acc, f1) in enumerate(zip(train_metrics['task_losses'], train_metrics['task_balanced_accuracies'], train_metrics['task_f1_scores']), 1):
+        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%, Train F1: {f1*100:.2f}%")
     # Print the metrics for the final output
-    print(f"Final Output - Train Accuracy: {train_metrics['final_accuracy']*100:.2f}%, Train Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%")
+    print(f"Final Output - Train Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, Train F1: {train_metrics['final_f1']*100:.2f}%, Recall: {train_metrics['final_recall']*100:.2f}%, Precision: {train_metrics['final_precision']*100:.2f}%")
     return train_metrics, task_weights
 
 
-def test_step(model, data_loader, device):
+def test_step(model, data_loader, device, task_weights=None):
     """
     Evaluate the model on the test dataset.
 
@@ -146,11 +148,63 @@ def test_step(model, data_loader, device):
     """
     # Unpack the return values from _train_or_test function including the final output metrics
     test_metrics = _train_or_test(
-        model, data_loader, None, device, is_train=False
+        model, data_loader, None, device, is_train=False, task_weights=task_weights
     )
-    print(f"\nTest loss: {test_metrics['average_loss']:.5f}")
-    for i, (acc, bal_acc) in enumerate(zip(test_metrics['task_accuracies'], test_metrics['task_balanced_accuracies']), 1):
-        print(f"Task {i} - Test Accuracy: {acc*100:.2f}%, Test Balanced Accuracy: {bal_acc*100:.2f}%")
+    print(f"Val loss: {test_metrics['average_loss']:.5f}")
+    for i, (loss, bal_acc, f1) in enumerate(zip(test_metrics['task_losses'], test_metrics['task_balanced_accuracies'], test_metrics['task_f1_scores']), 1):
+        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%, Train F1: {f1*100:.2f}%")
     # Print the metrics for the final output
-    print(f"Final Output - Test Accuracy: {test_metrics['final_accuracy']*100:.2f}%, Test Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%")
+    print(f"Final Output - Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1: {test_metrics['final_f1']*100:.2f}%, Recall: {test_metrics['final_recall']*100:.2f}%, Precision: {test_metrics['final_precision']*100:.2f}%")
     return test_metrics
+
+# Function to evaluate the model on the test set
+def evaluate_model(data_loader, model, device):
+    model.eval()  # Set the model to evaluation mode
+    
+    final_pred_targets = [[] for _ in range(5)]
+    final_pred_outputs = [[] for _ in range(5)]
+    
+    final_pred_targets = []
+    final_pred_outputs = []
+    
+    confusion_matrix = np.zeros((2, 2), dtype=int)
+    with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
+        for X, targets, _, final_target, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
+            X = X.to(device)
+            targets = [t.float().unsqueeze(1).to(device) for t in targets]
+            final_target = final_target.float().unsqueeze(1).to(device)
+            
+            final_output, task_outputs = model(X)
+            
+            for i, (task_output, target) in enumerate(zip(task_outputs, targets)):
+                # Compute accuracy for each task
+                preds = task_output.argmax(dim=1)
+                final_pred_targets[i].extend(target.cpu().numpy())
+                final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
+            
+            preds = final_output.round()
+            final_pred_targets.extend(final_target.cpu().numpy())
+            final_pred_outputs.extend(preds.detach().cpu().numpy())
+            
+            for i, l in enumerate(final_target.int()):
+                confusion_matrix[l.item(), int(preds[i].item())] += 1
+    
+    task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
+    task_f1_scores = [f1_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
+    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
+    final_f1 = f1_score(final_targets, final_outputs)
+    final_precision = precision_score(final_targets, final_outputs)
+    final_recall = recall_score(final_targets, final_outputs)
+    final_auc = roc_auc_score(final_targets, final_outputs)
+    
+    # return the metrics as a dictionary
+    metrics = {'task_balanced_accuracies': task_balanced_accuracies,
+               'task_f1_scores': task_f1_scores,
+               'final_balanced_accuracy': final_balanced_accuracy,
+               'final_f1': final_f1,
+               'final_precision': final_precision,
+               'final_recall': final_recall,
+               'final_auc': final_auc,
+            }
+    
+    return metrics, confusion_matrix

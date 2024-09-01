@@ -5,13 +5,16 @@ from src.models.backbone_models import denseFPN_121, denseFPN_201, efficientFPN_
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
-    'denseNet121': models.densenet121(weights='DEFAULT').features[:-1],
-    'denseNet201': models.densenet201(weights='DEFAULT').features[:-1],
-    'efficientNetV2_s': models.efficientnet_v2_s(weights='DEFAULT').features[:-1],
-    'denseFPN_121': denseFPN_121,
-    'denseFPN_201': denseFPN_201,
-    'efficientFPN_v2_s': efficientFPN_v2_s,
-    'efficientDecoder_v2_s': efficientDecoder_v2_s
+    'denseNet121': denseNet121,
+    'denseNet169': denseNet169,
+    'denseNet201': denseNet201,
+    'resNet34': resNet34,
+    'resNet152': resNet152,
+    'vgg16': vgg16,
+    'vgg19': vgg19,
+    'denseFpn121': denseFPN_121,
+    'denseFpn201': denseFPN_201,
+    'efficientFpn': efficientFPN_v2_s
 }
 
 
@@ -20,14 +23,16 @@ BACKBONE_DICT = {
 ############################################################################################################################################################################
 
 class BaselineModel(nn.Module):
-    def __init__(self, backbone, weights, common_channel_size, output_channel_size, output_feature_size, hidden_layers, num_tasks):
+    def __init__(self, backbone, weights, hidden_layers, num_tasks):
         super(BaselineModel, self).__init__()
-        self.backbone = backbone(weights=weights, common_channel_size=common_channel_size, output_channel_size=output_channel_size, output_feature_size=output_feature_size)
+        self.backbone = backbone(weights=weights)
+    
+        out_C, out_H, out_W = self.backbone.get_output_dims()
         
         self.task_specific_layers = nn.ModuleList([
             nn.Sequential(
                 nn.Flatten(),
-                nn.Linear(common_channel_size*output_feature_size*output_feature_size, hidden_layers), # was 1024, lowering it makes it more faithful to interpretation
+                nn.Linear(out_C*out_H*out_W, hidden_layers), # was 1024, lowering it makes it more faithful to interpretation
                 nn.BatchNorm1d(hidden_layers),
                 nn.ReLU(),
                 nn.Dropout(0.2) # 0.2
@@ -35,7 +40,7 @@ class BaselineModel(nn.Module):
         ])
         
         self.task_specific_classifier = nn.ModuleList([
-            nn.Linear(hidden_layers, 1) for _ in range(num_tasks)
+            nn.Linear(hidden_layers, 5) for _ in range(num_tasks)
         ])
         
         self.final_classifier = nn.Sequential(
@@ -57,7 +62,8 @@ class BaselineModel(nn.Module):
         concatenated_outputs = torch.cat(intermediate_outputs, dim=1)
         
         # Nodule Characteristics Prediction
-        task_outputs = [torch.sigmoid(self.task_specific_classifier[i](intermediate_outputs[i])) for i in range(len(intermediate_outputs))]
+        # task_outputs = [torch.sigmoid(self.task_specific_classifier[i](intermediate_outputs[i])) for i in range(len(intermediate_outputs))]
+        task_outputs = [self.task_specific_classifier[i](intermediate_outputs[i]) for i in range(len(intermediate_outputs))]
         
         # Final Malignancy Prediction
         final_output = torch.sigmoid(self.final_classifier(concatenated_outputs))
@@ -65,7 +71,7 @@ class BaselineModel(nn.Module):
         return final_output, task_outputs
     
     
-def construct_baselineModel(backbone_name='efficientFPN_v2_s', 
+def construct_baselineModel(backbone_name='denseNet121', 
                             weights='DEFAULT', 
                             common_channel_size=256, 
                             output_channel_size=256, 
@@ -96,10 +102,7 @@ def construct_baselineModel(backbone_name='efficientFPN_v2_s',
     backbone = BACKBONE_DICT[backbone_name]
     
     return BaselineModel(backbone=backbone, 
-                         weights=weights, 
-                         common_channel_size=common_channel_size, 
-                         output_channel_size=output_channel_size, 
-                         output_feature_size=output_feature_size,
+                         weights=weights,
                          hidden_layers=hidden_layers, 
                          num_tasks=num_tasks)
 
