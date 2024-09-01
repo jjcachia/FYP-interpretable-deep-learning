@@ -266,8 +266,9 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                     weights = norm.pdf(x, mean, std_dev)
                     weights = torch.tensor(weights, dtype=torch.float32, device=device)
                     weights = weights / weights.sum()
+                    weights = weights.view(-1, 1)
                     print(task_output, task_output.shape, weights, weights.shape)
-                    task_output = (task_output * weights).sum()
+                    task_output = (task_output * weights).sum(dim=0)
                     print(task_output, task_output.shape)
 
                 preds = task_output.argmax().unsqueeze(0)
