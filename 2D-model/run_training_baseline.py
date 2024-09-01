@@ -103,7 +103,7 @@ def main():
 
     batch_images = next(iter(train_dataloader))
 
-    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x {batch_images[0].shape[4]} (NCDHW)\n")
+    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x (NCHW)\n")
     print(f"Number of Characteristics: {len(batch_images[1])}")
 
     ###############################################################################################################
