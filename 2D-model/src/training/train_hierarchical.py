@@ -128,7 +128,7 @@ def train_step(model, data_loader, optimizer, device, task_weights=None):
     )
     print(f"Train loss: {train_metrics['average_loss']:.5f}")
     for i, (loss, bal_acc) in enumerate(zip(train_metrics['task_losses'], train_metrics['task_balanced_accuracies']), 1):
-        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
+        print(f"Task {i} - Loss: {loss:.2f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Train Balanced Accuracy: {train_metrics['final_balanced_accuracy']*100:.2f}%, Train F1: {train_metrics['final_f1']*100:.2f}%, Recall: {train_metrics['final_recall']*100:.2f}%, Precision: {train_metrics['final_precision']*100:.2f}%")
     return train_metrics, task_weights
@@ -152,7 +152,7 @@ def test_step(model, data_loader, device, task_weights=None):
     )
     print(f"Val loss: {test_metrics['average_loss']:.5f}")
     for i, (loss, bal_acc) in enumerate(zip(test_metrics['task_losses'], test_metrics['task_balanced_accuracies']), 1):
-        print(f"Task {i} - Loss: {loss:2.f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
+        print(f"Task {i} - Loss: {loss:.2f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1: {test_metrics['final_f1']*100:.2f}%, Recall: {test_metrics['final_recall']*100:.2f}%, Precision: {test_metrics['final_precision']*100:.2f}%")
     return test_metrics
