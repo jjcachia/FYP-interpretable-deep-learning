@@ -177,8 +177,8 @@ def test_step(model, data_loader, device, task_weights=None):
 def evaluate_model(data_loader, model, device):
     model.eval()  # Set the model to evaluation mode
     
-    final_pred_targets = [[] for _ in range(5)]
-    final_pred_outputs = [[] for _ in range(5)]
+    final_pred_targets = [[] for _ in range(model.num_tasks)]
+    final_pred_outputs = [[] for _ in range(model.num_tasks)]
     
     final_targets = []
     final_outputs = []
@@ -203,8 +203,8 @@ def evaluate_model(data_loader, model, device):
             final_targets.extend(final_target.cpu().numpy())
             final_outputs.extend(preds.detach().cpu().numpy())
             
-            # for i, l in enumerate(final_target.int()):
-            #     confusion_matrix[l.item(), int(preds[i].item())] += 1
+            for i, l in enumerate(final_target.int()):
+                confusion_matrix[l.item(), int(preds[i].item())] += 1
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
@@ -228,8 +228,8 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
     model.to(device)
     model.eval()
     
-    final_pred_targets = [[] for _ in range(5)]
-    final_pred_outputs = [[] for _ in range(5)]
+    final_pred_targets = [[] for _ in range(model.num_tasks)]
+    final_pred_outputs = [[] for _ in range(model.num_tasks)]
     
     final_targets = []
     final_outputs = []
@@ -253,7 +253,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                     task_output = torch.median(task_output, dim=0).values
 
                 preds = task_output.argmax()
-                
+                print(preds, task_label, preds.shape, task_label.shape)
                 final_pred_targets[i].extend(task_label.numpy())
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
@@ -270,7 +270,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             # Append the final prediction for the nodule
             final_targets.append(labels.numpy())
             final_outputs.append(predictions.cpu().numpy())
-
+    print("test")
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
     f1 = f1_score(final_targets, final_outputs)
