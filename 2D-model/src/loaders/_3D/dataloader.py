@@ -39,7 +39,7 @@ class LIDCDataset(Dataset):
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         
         # Extract patient identifiers from the image directory paths
-        all_labels['patient_id'] = all_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))))
+        all_labels['patient_id'] = all_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(x)))
         
         # Split the data into train, validation, and test sets
         random_state = 27
