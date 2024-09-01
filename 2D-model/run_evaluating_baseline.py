@@ -97,7 +97,8 @@ def main():
     model.load_state_dict(load_model_from_chunks(best_model_path))
     
     # labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2_5D', 'Meta', 'adjacent_slices_labels.csv')
     
     LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=50, shuffle=False, num_workers=0)

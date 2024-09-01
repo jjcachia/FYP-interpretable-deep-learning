@@ -59,8 +59,8 @@ class LIDCEvaluationDataset(Dataset):
         
         # Load all slices for the nodule and the label of the nodule
         images = [np.load(row['image_dir']) for _, row in nodule_data.iterrows()]
-        images = [np.expand_dims(img, axis=0) for img in images]
-        images = [np.repeat(img, 3, axis=0) for img in images]
+        # images = [np.expand_dims(img, axis=0) for img in images]
+        # images = [np.repeat(img, 3, axis=0) for img in images]
         images = [torch.from_numpy(img) for img in images]
 
         label_chars = []

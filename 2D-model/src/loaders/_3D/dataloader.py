@@ -20,8 +20,9 @@ class LIDCDataset(Dataset):
         self.chosen_chars = chosen_chars
 
         # Preprocess the labels
-        all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         all_labels.drop(columns=['Internalstructure'], inplace=True)
+        
+        all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         all_labels['Calcification'] = all_labels['Calcification'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1})
         all_labels['Sphericity'] = all_labels['Sphericity'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         all_labels['Margin'] = all_labels['Margin'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
@@ -29,13 +30,16 @@ class LIDCDataset(Dataset):
         all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
         all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 1})
         all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 0, 3: 1, 4: 1, 5: 1})
+        
         if indeterminate:
-            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
         else:
+            # all_labels = all_labels[all_labels['Malignancy'] != 3]
+            # all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 4: 1, 5: 1})
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         
         # Extract patient identifiers from the image directory paths
-        all_labels['patient_id'] = all_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(x)))
+        all_labels['patient_id'] = all_labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))))
         
         # Split the data into train, validation, and test sets
         random_state = 27
@@ -43,23 +47,13 @@ class LIDCDataset(Dataset):
         train_patients, temp_patients = train_test_split(unique_patients, test_size=(validation_split + test_split), random_state=random_state)
         val_patients, test_patients = train_test_split(temp_patients, test_size=(test_split / (validation_split + test_split)), random_state=random_state)
         
-        # temp_patients, test_patients = train_test_split(unique_patients, test_size=test_split, random_state=random_state)
-        # train_patients, val_patients = train_test_split(temp_patients, test_size=(validation_split/(1-test_split)), random_state=random_state)
-        
         # Assign the split data based on the chosen split
         if split == 'train':
             self.labels = all_labels[all_labels['patient_id'].isin(train_patients)]
-            # self.transforms = transforms.Compose([
-            #     RandFlip(spatial_axis=0),  # Random flip along the first axis
-            #     RandFlip(spatial_axis=1),  # Random flip along the second axis
-            #     RandFlip(spatial_axis=2),  # Random flip along the third axis
-            #     RandRotate90(spatial_axes=(0, 1)),  # Random 90 degree rotation along the first and second axis
-            #     RandAffine(translate_range=5),  # Random affine transformation with a 10 pixel translation
-            # ])
             self.transforms = Compose([
-                RandFlip(prob=0.5, spatial_axis=[0]),  # Example: Random flip along the first axis with a probability of 0.5
-                RandRotate90(prob=0.5, spatial_axes=(0, 1)),  # Example: Random 90 degree rotation
-                RandAffine(prob=0.5, translate_range=5),  # Example: Random affine transformations
+                RandFlip(prob=0.1, spatial_axis=[0]),  # Example: Random flip along the first axis with a probability of 0.5
+                RandRotate90(prob=0.1, spatial_axes=(0, 1)),  # Example: Random 90 degree rotation
+                RandAffine(prob=0.1, translate_range=5),  # Example: Random affine transformations
             ])
         elif split == 'push':
             self.labels = all_labels[all_labels['patient_id'].isin(train_patients)]
@@ -98,7 +92,7 @@ class LIDCDataset(Dataset):
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
-        characteristics = self.labels[self.labels.columns[1:-2]]#-4]]#-2]]
+        characteristics = self.labels[self.labels.columns[1:-2]]
         for char_idx in range(0, self.num_characteristics):
             if self.chosen_chars[char_idx] is False:
                 continue
@@ -113,5 +107,7 @@ class LIDCDataset(Dataset):
         # Apply Data Augmentation to the image
         if self.transforms:
             vol = self.transforms(vol)
-            
-        return vol, label_chars, bweight_chars, final_pred_label, bweight_fpred
+        
+        slice_weight = 0.0
+        
+        return vol, label_chars, bweight_chars, final_pred_label, bweight_fpred, slice_weight

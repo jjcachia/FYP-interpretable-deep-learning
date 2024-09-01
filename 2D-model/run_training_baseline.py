@@ -4,7 +4,7 @@ import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn a
 import numpy as np
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
-from src.loaders._2_5D.dataloader import LIDCDataset
+from src.loaders._3D.dataloader import LIDCDataset
 # from src.training.train_final_prediction import train_step, test_step, evaluate_model
 from src.training.train_hierarchical import train_step, test_step, evaluate_model, evaluate_model_by_nodule
 from src.models.base_model import construct_baseModel
@@ -89,7 +89,8 @@ def main():
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
     # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
-    labels_file = os.path.join(script_dir, 'dataset', '2_5D', 'Meta', 'adjacent_slices_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '2_5D', 'Meta', 'adjacent_slices_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
     
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
@@ -105,7 +106,7 @@ def main():
 
     batch_images = next(iter(train_dataloader))
 
-    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x (NCHW)\n")
+    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x {batch_images[0].shape[4]} (NCHW)\n")
     print(f"Number of Characteristics: {len(batch_images[1])}")
 
     ###############################################################################################################
@@ -119,17 +120,13 @@ def main():
     # Set the number of epochs (we'll keep this small for faster training times)
     epochs = 100
 
-    if args.backbone == 'efficientNet3D':
-        from efficientnet_pytorch_3d import EfficientNet3D #TODO: REMOVE IF NOT 3D
-        model = EfficientNet3D.from_name("efficientnet-b0", in_channels=1, override_params={'num_classes': 1})
-    else:
-        if args.model not in MODEL_DICT:
-            raise ValueError(f"Unsupported model name {args.model}")
-        construct_Model = MODEL_DICT[args.model]
-        if args.weights == 'None':
-            args.weights = None
-        # Create the model instance
-        model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    if args.model not in MODEL_DICT:
+        raise ValueError(f"Unsupported model name {args.model}")
+    construct_Model = MODEL_DICT[args.model]
+    if args.weights == 'None':
+        args.weights = None
+    # Create the model instance
+    model = construct_Model(backbone_name=args.backbone, weights=args.weights)
     
     if args.model == 'base':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
@@ -210,70 +207,70 @@ def main():
     
     # Group slices by nodule and evaluate the model on each nodule
     # test set
-    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
-    
-    # Evaluate the model on the test set
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
-    print(f"Test Metrics with Median Aggregation:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
-    print(f"Test Metrics with Median Aggregation:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
- 
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.8)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.8:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.2)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.2:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.6)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.6:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.8)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.8:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
-    
-    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=2.0)
-    print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 2.0:")
-    print(test_metrics)
-    print("Test Confusion Matrix:")
-    print(test_confusion_matrix)
+    # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
+    # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
+    # 
+    # # Evaluate the model on the test set
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
+    # print(f"Test Metrics with Median Aggregation:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+# 
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
+    # print(f"Test Metrics with Median Aggregation:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+ # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.8)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.8:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.2)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.2:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.6)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.6:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.8)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.8:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
+    # 
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=2.0)
+    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 2.0:")
+    # print(test_metrics)
+    # print("Test Confusion Matrix:")
+    # print(test_confusion_matrix)
     
     # Save the test metrics to a CSV file
     df_test = pd.DataFrame([test_metrics])

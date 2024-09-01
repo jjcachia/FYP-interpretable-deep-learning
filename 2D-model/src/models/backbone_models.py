@@ -165,7 +165,7 @@ class efficientNet3D(nn.Module):
        Returns a feature map of size 1280x4x4."""
     def __init__(self, weights='DEFAULT', common_channel_size=None):
         super(efficientNet3D, self).__init__()
-        self.features = EfficientNet3D.from_name("efficientnet-b0", override_params={'include_top': False}, in_channels=1)
+        self.features = EfficientNet3D.from_name("efficientnet-b3", override_params={'include_top': False}, in_channels=1)
 
     def forward(self, x):
         x = self.features(x)
@@ -173,7 +173,9 @@ class efficientNet3D(nn.Module):
     
     def get_output_dims(self):
         """ Returns the number of output channels from the final convolutional layer. """
-        return 1280, 2, 2, 2
+        dummy_input = torch.randn(1, 1, 128, 128, 128)
+        return self.features(dummy_input).shape[1:]
+        # return 1280, 2, 2, 2
 
 class CNNBlock3d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride = 1, padding = 0 , groups=1, act=True, bn=True, bias=False):
