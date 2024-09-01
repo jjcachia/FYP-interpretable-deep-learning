@@ -66,7 +66,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                 
                 # Compute loss for each task
                 # task_loss = torch.nn.functional.cross_entropy(task_output, target, weight=bweight_char)
-                task_loss = torch.nn.functional.binary_cross_entropy(task_output, target, reduction='none', weight=bweight_char)
+                task_loss = torch.nn.functional.cross_entropy(task_output, target, reduction='none', weight=bweight_char)
                 print(task_loss)
                 task_loss = (task_loss * slice_weight).mean()
                 print(task_loss)
