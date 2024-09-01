@@ -55,7 +55,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             loss = 0
             for i, (task_output, target, bweight_char) in enumerate(zip(task_outputs, targets, bweights_chars)):
                 # Compute loss for each task
-                torch.nn.functional.cross_entropy(task_output, target)# , weight=bweight_char)
+                task_loss = torch.nn.functional.cross_entropy(task_output, target)# , weight=bweight_char)
                 if task_weights:
                     task_loss *= task_weights[i]
                 task_losses[i] += task_loss.item()
