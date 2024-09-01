@@ -110,11 +110,11 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     average_loss = total_loss / len(data_loader)
     task_losses = [task_loss / len(data_loader) for task_loss in task_losses]
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs, average='macro')
+    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
     final_f1 = f1_score(final_targets, final_outputs, average='macro')
     final_precision = precision_score(final_targets, final_outputs, average='macro')
     final_recall = recall_score(final_targets, final_outputs, average='macro')
-    final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
+    # final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
     
     # return the metrics as a dictionary
     metrics = {'average_loss': average_loss, 
@@ -123,8 +123,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
                'final_precision': final_precision,
-               'final_recall': final_recall,
-               'final_auc': final_auc,
+               'final_recall': final_recall
+               # 'final_auc': final_auc,
             }
     
     # if is_train:
@@ -219,19 +219,19 @@ def evaluate_model(data_loader, model, device):
                 confusion_matrix[l.item(), int(preds[i].item())] += 1
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs, average='macro')
+    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
     final_f1 = f1_score(final_targets, final_outputs, average='macro')
     final_precision = precision_score(final_targets, final_outputs, average='macro')
     final_recall = recall_score(final_targets, final_outputs, average='macro')
-    final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
+    # final_auc = roc_auc_score(final_targets, final_outputs, average='macro')
     
     # return the metrics as a dictionary
     metrics = {'task_balanced_accuracies': task_balanced_accuracies,
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
                'final_precision': final_precision,
-               'final_recall': final_recall,
-               'final_auc': final_auc,
+               'final_recall': final_recall
+               #'final_auc': final_auc,
             }
     
     return metrics, confusion_matrix
