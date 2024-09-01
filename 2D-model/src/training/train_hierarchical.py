@@ -24,7 +24,7 @@ def _adjust_weights(balanced_accuracies, exponent=5, target_sum=5):
     scaled_weights = [w * target_sum for w in normalized_weights]
     return scaled_weights
 
-def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, slice_weight=False):
+def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, use_slice_weights=False):
     model.to(device)
     if is_train:
         model.train()
@@ -55,7 +55,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             # bweight = bweight.float().unsqueeze(1).to(device)
             bweight = bweight.float().to(device)
             
-            if slice_weight:
+            if use_slice_weights:
                 slice_weight = slice_weight.float().unsqueeze(1).to(device)
                 bweight_pred = bweight * slice_weight
             
@@ -64,7 +64,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             loss = 0
             for i, (task_output, target, bweight_char) in enumerate(zip(task_outputs, targets, bweights_chars)):
                 # Compute loss for each task
-                if slice_weight:
+                if use_slice_weights:
                     bweight_char = bweight_char[0][target] # Get the first element of the batch
                     bweight_char = bweight_char * slice_weight
                     task_loss = torch.nn.functional.cross_entropy(task_output, target, reduction='none')
