@@ -253,6 +253,21 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                     task_output = torch.softmax(task_output, dim=1)
                     print(task_output, task_output.shape)
                     task_output = torch.median(task_output, dim=0).values
+                
+                if mode == "gaussian":
+                    # Calculate the gaussian weighted average prediction for the nodule
+                    num_slices = task_output.size(0)
+                    x = np.linspace(0, num_slices-1, num_slices)
+                    # mean = (num_slices - 1) / 2
+                    mean = num_slices / 2
+                    # std_dev = num_slices / std_dev
+                    std_dev = std_dev
+                    weights = norm.pdf(x, mean, std_dev)
+                    weights = torch.tensor(weights, dtype=torch.float32, device=device)
+                    weights = weights / weights.sum()
+                    print(task_output, task_output.shape, weights, weights.shape)
+                    predictions = (predictions * weights).sum()
+                    print(predictions, predictions.shape)
 
                 preds = task_output.argmax().unsqueeze(0)
                 print(preds, task_label, preds.shape, task_label.shape)

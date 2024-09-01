@@ -119,6 +119,12 @@ def main():
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)  
     
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix) 
+    
     # Save the test metrics to a CSV file
     df_test = pd.DataFrame([test_metrics])
     df_test.to_csv(test_metrics_path)
