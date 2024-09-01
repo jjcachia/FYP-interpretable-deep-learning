@@ -86,9 +86,9 @@ class LIDCDataset(Dataset):
         self.malignancy_weights = class_counts.apply(lambda x: (x.mean()) / x)
         
         # Extract the number of slices of each nodule and the slice id
-        # self.labels['nodule_id'] = self.labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
-        # self.labels['slice_index'] = self.labels.groupby('nodule_id').cumcount()
-        # self.labels['total_slices'] = self.labels.groupby('nodule_id')['slice_index'].transform('max') + 1
+        self.labels['nodule_id'] = self.labels['image_dir'].apply(lambda x: os.path.basename(os.path.dirname(os.path.dirname(x))+'-'+os.path.basename(os.path.dirname(x))))
+        self.labels['slice_index'] = self.labels.groupby('nodule_id').cumcount()
+        self.labels['total_slices'] = self.labels.groupby('nodule_id')['slice_index'].transform('max') + 1
 
     def __len__(self):
         return len(self.labels)
@@ -107,20 +107,20 @@ class LIDCDataset(Dataset):
         #     image = self.transform(image)
         
         # Get the weight for the slice
-        # num_slices = self.labels['total_slices'].iloc[idx]
-        # slice_index = self.labels['slice_index'].iloc[idx]
-        # x = np.linspace(0, num_slices-1, num_slices)
-        # mean = (num_slices - 1) / 2
-        # std_dev = 1.0
-        # weights = norm.pdf(x, mean, std_dev)
-        # weights = weights / weights.sum()
-        # weights = weights*10
-        # slice_weight = weights[slice_index]
+        num_slices = self.labels['total_slices'].iloc[idx]
+        slice_index = self.labels['slice_index'].iloc[idx]
+        x = np.linspace(0, num_slices-1, num_slices)
+        mean = (num_slices - 1) / 2
+        std_dev = 1.0
+        weights = norm.pdf(x, mean, std_dev)
+        weights = weights / weights.sum()
+        weights = weights*10
+        slice_weight = weights[slice_index]
         
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
-        characteristics = self.labels[self.labels.columns[1:-2]]
+        characteristics = self.labels[self.labels.columns[1:-4]]#-2]]
         for char_idx in range(0, self.num_characteristics):
             if self.chosen_chars[char_idx] is False:
                 continue
@@ -136,4 +136,4 @@ class LIDCDataset(Dataset):
         if self.transforms:
             image = self.transforms(image)
             
-        return image, label_chars, bweight_chars, final_pred_label, bweight_fpred#, slice_weight
+        return image, label_chars, bweight_chars, final_pred_label, bweight_fpred, slice_weight

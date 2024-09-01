@@ -88,7 +88,8 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
     
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
@@ -155,10 +156,11 @@ def main():
     start_time = time.time()  # Record the start time of the entire training
     max_val_bacc = float(0)
     # min_val_loss = float('inf')
-    task_weights = [1.0/model.num_tasks] * model.num_tasks
+    # task_weights = [1.0/model.num_tasks] * model.num_tasks
+    task_weights = None
     for epoch in range(epochs):
         # Print header
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t\n" + "-"*100)# + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" 
         # Train and test the model batch by batch
         epoch_start = time.time()  # Start time of the current epoch
 
@@ -208,15 +210,15 @@ def main():
     
     # Group slices by nodule and evaluate the model on each nodule
     # test set
-    # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
-    # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
-    # 
-    # # Evaluate the model on the test set
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
-    # print(f"Test Metrics with Median Aggregation:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
+    LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]))
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
+    
+    # Evaluate the model on the test set
+    test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
+    print(f"Test Metrics with Median Aggregation:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)
     
     # 
     # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")

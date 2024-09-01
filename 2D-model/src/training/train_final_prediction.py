@@ -28,7 +28,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
             
             # Forward pass
             outputs = model(X)
-            outputs = torch.sigmoid(outputs)
+            # outputs = torch.sigmoid(outputs) #TODO: When applying 3D model
             # bweight_pred = bweight_pred * slice_weight
                         
             # Compute loss
