@@ -267,8 +267,8 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                     weights = torch.tensor(weights, dtype=torch.float32, device=device)
                     weights = weights / weights.sum()
                     print(task_output, task_output.shape, weights, weights.shape)
-                    predictions = (predictions * weights).sum()
-                    print(predictions, predictions.shape)
+                    task_output = (task_output * weights).sum()
+                    print(task_output, task_output.shape)
 
                 preds = task_output.argmax().unsqueeze(0)
                 print(preds, task_label, preds.shape, task_label.shape)
@@ -281,6 +281,16 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             if mode == "median":
                 # Calculate the median prediction for the nodule
                 outputs = outputs.median()
+            if mode == "gaussian":
+                # Calculate the gaussian weighted average prediction for the nodule
+                num_slices = outputs.size(0)
+                x = np.linspace(0, num_slices-1, num_slices)
+                mean = num_slices / 2
+                std_dev = std_dev
+                weights = norm.pdf(x, mean, std_dev)
+                weights = torch.tensor(weights, dtype=torch.float32, device=device)
+                weights = weights / weights.sum()
+                outputs = (outputs * weights).sum()
 
             # predictions = predictions.round()
             predictions = (outputs > decision_threshold).float()
