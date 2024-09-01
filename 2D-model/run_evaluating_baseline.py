@@ -3,7 +3,7 @@ import pandas as pd
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
 from src.utils.helpers import setup_directories, load_model_from_chunks, set_seed
-from src.loaders._2D.dataloader import LIDCDataset
+from src.loaders._2_5D.dataloader import LIDCDataset
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
 from src.evaluation.evaluating import LIDCEvaluationDataset
