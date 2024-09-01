@@ -101,7 +101,7 @@ class LIDCDataset(Dataset):
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
-        characteristics = self.labels[self.labels.columns[1:-2]]#-4]]#-2]]
+        characteristics = self.labels[self.labels.columns[1:-4]]
         for char_idx in range(0, self.num_characteristics):
             if self.chosen_chars[char_idx] is False:
                 continue

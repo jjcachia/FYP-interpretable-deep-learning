@@ -1,5 +1,3 @@
-# TODO: Complete the implementation of the training and testing steps for the hierarchical model with categorical tasks and final prediction.
-
 import torch
 from tqdm import tqdm
 from sklearn.metrics import balanced_accuracy_score
@@ -26,24 +24,18 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True):
             X = X.to(device)
             bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
             outputs = model(X)
-            # print("Weights shape:", bweights_chars.shape)
-            # print("Output shape:", [o.shape for o in outputs])
-            # print("Target shape:", [o.shape for o in targets])
+
             loss = 0
             for i, (output, target) in enumerate(zip(outputs, targets)):
-                # print("Output shape:", output.shape)
-                # print("Target shape:", target.shape)
-                # print("Weight shape:", bweights_chars[i].shape)
+
                 target = target.to(device)
                 task_loss = (torch.nn.functional.cross_entropy(output, target, reduction="none")*bweights_chars[i]).mean()
                 loss += task_loss
-                # print("Task loss:", task_loss)
 
                 # Compute accuracy for each task
                 _, preds = torch.max(output, 1)
                 _, tars = torch.max(target, 1)
-                # print("Preds shape:", preds.shape)
-                # print("Tars shape:", tars.shape)
+
                 total_correct[i] += (preds == tars).sum().item()
                 total_samples[i] += target.size(0)
 
