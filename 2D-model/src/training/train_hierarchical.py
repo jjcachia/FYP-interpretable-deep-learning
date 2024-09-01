@@ -231,8 +231,8 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
     final_pred_targets = [[] for _ in range(5)]
     final_pred_outputs = [[] for _ in range(5)]
     
-    final_pred_targets = []
-    final_pred_outputs = []
+    final_targets = []
+    final_outputs = []
     
     with torch.no_grad():
         for slices, task_labels, labels in tqdm(data_loader, leave=False):
@@ -247,13 +247,13 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             for i, (task_output, task_label) in enumerate(zip(task_outputs, task_labels)):
                 if task_output.ndim > 1 and task_output.shape[1] == 1:  # If model outputs a single probability per slice
                     task_output = task_output.squeeze(1)
-                print(task_output)
+
                 if mode == "median":
                     # Calculate the median prediction for the nodule
                     task_output = torch.median(task_output, dim=0).values
-                print(task_output)
+
                 preds = task_output.argmax()
-                print(preds)
+                
                 final_pred_targets[i].extend(task_label.numpy())
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
@@ -268,20 +268,20 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             predictions = (outputs > decision_threshold).float()
 
             # Append the final prediction for the nodule
-            final_pred_targets.append(labels.numpy())
-            final_pred_outputs.append(predictions.cpu().numpy())
+            final_targets.append(labels.numpy())
+            final_outputs.append(predictions.cpu().numpy())
 
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
-    balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
-    f1 = f1_score(final_pred_targets, final_pred_outputs)
-    precision = precision_score(final_pred_targets, final_pred_outputs)
-    recall = recall_score(final_pred_targets, final_pred_outputs)
-    auc = roc_auc_score(final_pred_targets, final_pred_outputs)
+    balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
+    f1 = f1_score(final_targets, final_outputs)
+    precision = precision_score(final_targets, final_outputs)
+    recall = recall_score(final_targets, final_outputs)
+    auc = roc_auc_score(final_targets, final_outputs)
     
     # calculate confusion matrix
     confusion_matrix = np.zeros((2, 2), dtype=int)
-    for i, l in enumerate(final_pred_targets):
-        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
+    for i, l in enumerate(final_targets):
+        confusion_matrix[int(l), int(final_outputs[i])] += 1
     
     metrics = {'final_balanced_accuracy': balanced_accuracy,
                'final_f1': f1,
