@@ -24,7 +24,7 @@ def _adjust_weights(balanced_accuracies, exponent=5, target_sum=5):
     scaled_weights = [w * target_sum for w in normalized_weights]
     return scaled_weights
 
-def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, use_slice_weights=False, indeterminate=False):
+def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_weights=None, use_slice_weights=True, indeterminate=False):
     model.to(device)
     if is_train:
         model.train()
