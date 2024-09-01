@@ -242,7 +242,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
                 slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
             
-            outputs, task_predictions = model(slices)
+            outputs, task_outputs = model(slices)
             
             for i, (task_output, target) in enumerate(zip(task_outputs, targets)):
                 if task_output.ndim > 1 and task_output.shape[1] == 1:  # If model outputs a single probability per slice
