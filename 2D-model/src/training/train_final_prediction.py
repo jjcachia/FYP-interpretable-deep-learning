@@ -117,3 +117,68 @@ def evaluate_model(data_loader, model, device):
     
     return metrics, confusion_matrix
 
+def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision_threshold=0.5, std_dev=1.2):
+    model.to(device)
+    model.eval()
+    
+    final_pred_targets = []
+    final_pred_outputs = []
+    
+    with torch.no_grad():
+        for slices, labels,_ in tqdm(data_loader, leave=False):
+            slices = slices.to(device)
+            
+            # Reshape slices if your model expects a single batch dimension
+            if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
+                slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
+            
+            predictions = model(slices)
+            
+            if predictions.ndim > 1 and predictions.shape[1] == 1:  # If model outputs a single probability per slice
+                predictions = predictions.squeeze(1)
+
+            if mode == "median":
+                # Calculate the median prediction for the nodule
+                predictions = predictions.median()
+            elif mode == "mean":
+                # Calculate the mean prediction for the nodule
+                predictions = predictions.mean()
+            elif mode == "gaussian":
+                # Generate Gaussian weights centered at the central slice of the nodule
+                num_slices = predictions.size(0)
+                x = np.linspace(0, num_slices-1, num_slices)
+                # mean = (num_slices - 1) / 2
+                mean = num_slices / 2
+                # std_dev = num_slices / std_dev
+                std_dev = std_dev
+                weights = norm.pdf(x, mean, std_dev)
+                weights = torch.tensor(weights, dtype=torch.float32, device=device)
+                weights = weights / weights.sum()
+                predictions = (predictions * weights).sum()
+
+            # predictions = predictions.round()
+            predictions = (predictions > decision_threshold).float()
+
+            # Append the final prediction for the nodule
+            final_pred_targets.append(labels.numpy())
+            final_pred_outputs.append(predictions.cpu().numpy())
+
+    balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
+    f1 = f1_score(final_pred_targets, final_pred_outputs)
+    precision = precision_score(final_pred_targets, final_pred_outputs)
+    recall = recall_score(final_pred_targets, final_pred_outputs)
+    auc = roc_auc_score(final_pred_targets, final_pred_outputs)
+    
+    # calculate confusion matrix
+    confusion_matrix = np.zeros((2, 2), dtype=int)
+    for i, l in enumerate(final_pred_targets):
+        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
+    
+    metrics = {'final_balanced_accuracy': balanced_accuracy,
+               'final_f1': f1,
+               'final_precision': precision,
+               'final_recall': recall,
+               'final_auc': auc,
+            }
+
+    return metrics, confusion_matrix

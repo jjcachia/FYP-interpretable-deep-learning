@@ -6,10 +6,10 @@ import numpy as np
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
 from src.loaders._2D.dataloader import LIDCDataset
 # from src.training.train_final_prediction import train_step, test_step, evaluate_model
-from src.training.train_hierarchical import train_step, test_step, evaluate_model
+from src.training.train_hierarchical import train_step, test_step, evaluate_model, evaluate_model_by_nodule
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
-from src.evaluation.evaluating import LIDCEvaluationDataset, evaluate_model_by_nodule
+from src.evaluation.evaluating import LIDCEvaluationDataset
 
 
 IMG_CHANNELS = 3
@@ -155,7 +155,7 @@ def main():
     start_time = time.time()  # Record the start time of the entire training
     max_val_bacc = float(0)
     # min_val_loss = float('inf')
-    task_weights = [1.0] * model.num_tasks
+    task_weights = [1.0/model.num_tasks] * model.num_tasks
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)
@@ -171,10 +171,10 @@ def main():
         all_train_metrics.append(train_metrics)  
         
         # Testing step
-        test_metrics, task_weights = test_step(data_loader=val_dataloader,
-                                               model=model,
-                                               device=device,
-                                               task_weights=task_weights)
+        test_metrics = test_step(data_loader=val_dataloader,
+                                 model=model,
+                                 device=device,
+                                 task_weights=task_weights)
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased
@@ -212,11 +212,12 @@ def main():
     # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
     # 
     # # Evaluate the model on the test set
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="mean")
+    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
     # print(f"Test Metrics with Median Aggregation:")
     # print(test_metrics)
     # print("Test Confusion Matrix:")
     # print(test_confusion_matrix)
+    
     # 
     # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
     # print(f"Test Metrics with Median Aggregation:")

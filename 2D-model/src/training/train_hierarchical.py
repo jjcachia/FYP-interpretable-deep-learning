@@ -110,12 +110,13 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
                'final_auc': final_auc,
             }
     
-    if is_train:
-        return metrics
-    elif is_train is False:
-        # Adjust task weights based on the validation balanced accuracies
-        task_weights = _adjust_weights(task_balanced_accuracies, exponent=2, target_sum=5)
-        return metrics, task_weights
+    # if is_train:
+    #     return metrics
+    # elif is_train is False:
+    #     # Adjust task weights based on the validation balanced accuracies
+    #     task_weights = _adjust_weights(task_balanced_accuracies, exponent=2, target_sum=5)
+    #     return metrics, task_weights
+    return metrics
 
 def train_step(model, data_loader, optimizer, device, task_weights=None):
     """
@@ -155,7 +156,7 @@ def test_step(model, data_loader, device, task_weights=None):
         dict: A dictionary containing the evaluation metrics.
     """
     # Unpack the return values from _train_or_test function including the final output metrics
-    test_metrics, task_weights = _train_or_test(
+    test_metrics = _train_or_test(
         model, data_loader, None, device, is_train=False, task_weights=task_weights
     )
     print(f"Val loss: {test_metrics['average_loss']:.5f}")
@@ -163,7 +164,7 @@ def test_step(model, data_loader, device, task_weights=None):
         print(f"Task {i} - Loss: {loss:.2f}, Train Balanced Accuracy: {bal_acc*100:.2f}%")
     # Print the metrics for the final output
     print(f"Final Output - Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1: {test_metrics['final_f1']*100:.2f}%, Recall: {test_metrics['final_recall']*100:.2f}%, Precision: {test_metrics['final_precision']*100:.2f}%")
-    return test_metrics, task_weights
+    return test_metrics
 
 # Function to evaluate the model on the test set
 def evaluate_model(data_loader, model, device):
@@ -214,4 +215,72 @@ def evaluate_model(data_loader, model, device):
                'final_auc': final_auc,
             }
     
+    return metrics, confusion_matrix
+
+def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision_threshold=0.5, std_dev=1.2):
+    model.to(device)
+    model.eval()
+    
+    final_pred_targets = [[] for _ in range(5)]
+    final_pred_outputs = [[] for _ in range(5)]
+    
+    final_pred_targets = []
+    final_pred_outputs = []
+    
+    with torch.no_grad():
+        for slices, task_labels, labels in tqdm(data_loader, leave=False):
+            slices = slices.to(device)
+            
+            # Reshape slices if your model expects a single batch dimension
+            if slices.dim() == 5:  # Assuming slices is (batch_size, num_slices, channels, height, width)
+                slices = slices.view(-1, slices.size(2), slices.size(3), slices.size(4))  # Flatten the slices into one batch
+            
+            outputs, task_predictions = model(slices)
+            
+            for i, (task_output, target) in enumerate(zip(task_outputs, targets)):
+                if task_output.ndim > 1 and task_output.shape[1] == 1:  # If model outputs a single probability per slice
+                    task_output = task_output.squeeze(1)
+                print(task_output)
+                if mode == "median":
+                    # Calculate the median prediction for the nodule
+                    task_output = task_output.median()
+                print(task_output)
+                preds = task_output.argmax(dim=1)
+                final_pred_targets[i].extend(task_labels.numpy())
+                final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
+            
+            if outputs.ndim > 1 and outputs.shape[1] == 1:  # If model outputs a single probability per slice
+                outputs = outputs.squeeze(1)
+
+            if mode == "median":
+                # Calculate the median prediction for the nodule
+                outputs = outputs.median()
+
+            # predictions = predictions.round()
+            predictions = (outputs > decision_threshold).float()
+
+            # Append the final prediction for the nodule
+            final_pred_targets.append(labels.numpy())
+            final_pred_outputs.append(predictions.cpu().numpy())
+
+    task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
+    balanced_accuracy = balanced_accuracy_score(final_pred_targets, final_pred_outputs)
+    f1 = f1_score(final_pred_targets, final_pred_outputs)
+    precision = precision_score(final_pred_targets, final_pred_outputs)
+    recall = recall_score(final_pred_targets, final_pred_outputs)
+    auc = roc_auc_score(final_pred_targets, final_pred_outputs)
+    
+    # calculate confusion matrix
+    confusion_matrix = np.zeros((2, 2), dtype=int)
+    for i, l in enumerate(final_pred_targets):
+        confusion_matrix[int(l), int(final_pred_outputs[i])] += 1
+    
+    metrics = {'final_balanced_accuracy': balanced_accuracy,
+               'final_f1': f1,
+               'final_precision': precision,
+               'final_recall': recall,
+               'final_auc': auc,
+               'task_balanced_accuracies': task_balanced_accuracies
+            }
+
     return metrics, confusion_matrix
