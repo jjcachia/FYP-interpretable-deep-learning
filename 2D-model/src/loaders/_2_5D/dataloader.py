@@ -12,22 +12,35 @@ from scipy.stats import norm
 class LIDCDataset(Dataset):
     def __init__(self, labels_file, transform=None, chosen_chars=None, indeterminate=True, split='train', validation_split=0.10, test_split=0.10):
         all_labels = pd.read_csv(labels_file)
+        self.transform = transform
         self.chosen_chars = chosen_chars
 
         # Preprocess the labels
-        # all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         all_labels.drop(columns=['Internalstructure'], inplace=True)
-        # all_labels['Calcification'] = all_labels['Calcification'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1})
-        # all_labels['Sphericity'] = all_labels['Sphericity'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
-        # all_labels['Margin'] = all_labels['Margin'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
-        # all_labels['Lobulation'] = all_labels['Lobulation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
-        # all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
-        # all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 1})
-        # all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 0, 3: 1, 4: 1, 5: 1})
+        
+        all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
+        all_labels['Calcification'] = all_labels['Calcification'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1})
+        all_labels['Sphericity'] = all_labels['Sphericity'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
+        all_labels['Margin'] = all_labels['Margin'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
+        all_labels['Lobulation'] = all_labels['Lobulation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
+        all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1})
+        all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 1})
+        all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 0, 3: 1, 4: 1, 5: 1})
+
+        # all_labels['Subtlety'] = all_labels['Subtlety'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+        # all_labels['Calcification'] = all_labels['Calcification'].replace({1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1}) #drop
+        # all_labels['Sphericity'] = all_labels['Sphericity'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 2})
+        # all_labels['Margin'] = all_labels['Margin'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 2})
+        # all_labels['Lobulation'] = all_labels['Lobulation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1}) #drop
+        # all_labels['Spiculation'] = all_labels['Spiculation'].replace({1: 0, 2: 1, 3: 1, 4: 1, 5: 1}) #drop
+        # all_labels['Texture'] = all_labels['Texture'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 2})
+        # all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
         
         if indeterminate:
-            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
         else:
+            # all_labels = all_labels[all_labels['Malignancy'] != 3]
+            # all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 4: 1, 5: 1})
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         
         # Extract patient identifiers from the image directory paths
@@ -86,7 +99,7 @@ class LIDCDataset(Dataset):
         # Load the image
         path = self.labels['image_dir'].iloc[idx]
         array = np.load(path)
-        image = torch.from_numpy(array)
+        image = torch.from_numpy(array)        
         
         # Get the weight for the slice
         num_slices = self.labels['total_slices'].iloc[idx]
@@ -102,7 +115,7 @@ class LIDCDataset(Dataset):
         # Extract the labels and binary weights for each characteristic
         label_chars = []
         bweight_chars = []
-        characteristics = self.labels[self.labels.columns[1:-4]]
+        characteristics = self.labels[self.labels.columns[1:-4]]#-2]]
         for char_idx in range(0, self.num_characteristics):
             if self.chosen_chars[char_idx] is False:
                 continue
@@ -113,6 +126,7 @@ class LIDCDataset(Dataset):
         # Extract the final prediction label and binary weight
         final_pred_label = self.labels['Malignancy'].iloc[idx]
         bweight_fpred = self.malignancy_weights.iloc[final_pred_label,0]
+        # bweight_fpred = self.malignancy_weights.iloc[:,0].values #TODO: Uncomment this line and comment the above line for multi-class classification
         
         # Apply Data Augmentation to the image
         if self.transforms:
