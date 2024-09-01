@@ -55,7 +55,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
             bweight = bweight.float().unsqueeze(1).to(device)
             slice_weight = slice_weight.float().unsqueeze(1).to(device)
             
-            bweight_pred = bweight_pred * slice_weight
+            bweight_pred = bweight * slice_weight
             
             final_output, task_outputs = model(X)
             
