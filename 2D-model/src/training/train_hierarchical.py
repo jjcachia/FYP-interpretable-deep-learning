@@ -244,7 +244,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             
             outputs, task_outputs = model(slices)
             
-            for i, (task_output, target) in enumerate(zip(task_outputs, targets)):
+            for i, (task_output, task_label) in enumerate(zip(task_outputs, task_labels)):
                 if task_output.ndim > 1 and task_output.shape[1] == 1:  # If model outputs a single probability per slice
                     task_output = task_output.squeeze(1)
                 print(task_output)
@@ -253,7 +253,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                     task_output = task_output.median()
                 print(task_output)
                 preds = task_output.argmax(dim=1)
-                final_pred_targets[i].extend(task_labels.numpy())
+                final_pred_targets[i].extend(task_label.numpy())
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
             if outputs.ndim > 1 and outputs.shape[1] == 1:  # If model outputs a single probability per slice
