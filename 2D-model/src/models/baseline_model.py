@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from src.models.backbone_models import denseNet121, denseNet169, denseNet201, resNet34, resNet152, vgg16, vgg19, denseFPN_121, denseFPN_201, efficientFPN_v2_s, efficientNet3D
+from src.models.backbone_models import denseNet121, denseNet169, denseNet201, resNet34, resNet152, vgg16, vgg19, denseFPN_121, denseFPN_201, efficientFPN_v2_s
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
@@ -14,8 +14,7 @@ BACKBONE_DICT = {
     'vgg19': vgg19,
     'denseFpn121': denseFPN_121,
     'denseFpn201': denseFPN_201,
-    'efficientFpn': efficientFPN_v2_s,
-    'efficientNet3D': efficientNet3D
+    'efficientFpn': efficientFPN_v2_s
 }
 
 
@@ -31,15 +30,12 @@ class BaselineModel(nn.Module):
         
         self.backbone = backbone(weights=weights)
         
-        out_C, out_D, out_H, out_W = self.backbone.get_output_dims()
-        
-        self.AdaptiveAvgPool = nn.AdaptiveAvgPool3d((1, 1, 1))
+        out_C, out_H, out_W = self.backbone.get_output_dims()
         
         self.task_specific_layers = nn.ModuleList([
             nn.Sequential(
-                nn.Dropout(0.3),
                 nn.Flatten(),
-                nn.Linear(out_C, hidden_layers), # was 1024, lowering it makes it more faithful to interpretation
+                nn.Linear(out_C*out_H*out_W, hidden_layers), # was 1024, lowering it makes it more faithful to interpretation
                 nn.BatchNorm1d(hidden_layers),
                 nn.ReLU(),
                 nn.Dropout(0.2) # 0.2
@@ -61,8 +57,6 @@ class BaselineModel(nn.Module):
     def forward(self, x):
         # Feature Extraction
         x = self.backbone(x)
-        
-        x = self.AdaptiveAvgPool(x)
         
         # Process intermediate outputs
         intermediate_outputs = [layer(x) for layer in self.task_specific_layers]
