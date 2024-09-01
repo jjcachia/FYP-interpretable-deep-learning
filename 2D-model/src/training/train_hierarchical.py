@@ -46,7 +46,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     with context:
         for X, targets, bweights_chars, final_target, bweight in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
-            bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
+            # bweights_chars = [b.float().unsqueeze(1).to(device) for b in bweights_chars]
+            bweights_chars = [b.float().to(device) for b in bweights_chars]
             # targets = [t.float().unsqueeze(1).to(device) for t in targets]
             targets = [t.long().to(device) for t in targets]
             # targets = [t - 1 for t in targets]  # Assuming targets are 1-indexed
