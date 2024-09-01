@@ -252,7 +252,6 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                 if mode == "median":
                     # Calculate the median prediction for the nodule
                     task_output = torch.softmax(task_output, dim=1)
-                    print(task_output, task_output.shape)
                     task_output = torch.median(task_output, dim=0).values
                 
                 if mode == "gaussian":
@@ -269,7 +268,6 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                     task_output = (task_output * weights).sum(dim=0)
 
                 preds = task_output.argmax().unsqueeze(0)
-                print(preds, task_label, preds.shape, task_label.shape)
                 final_pred_targets[i].extend(task_label.numpy())
                 final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
             
@@ -296,7 +294,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
             # Append the final prediction for the nodule
             final_targets.append(labels.numpy())
             final_outputs.append(predictions.cpu().numpy())
-    print("test")
+
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
     f1 = f1_score(final_targets, final_outputs)
