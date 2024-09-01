@@ -37,7 +37,7 @@ class LIDCDataset(Dataset):
         # all_labels['Diameter'] = all_labels['Diameter'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
         
         if indeterminate:
-            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 1, 4: 2, 5: 2})
+            all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 1, 3: 1, 4: 2, 5: 2})
         else:
             all_labels['Malignancy'] = all_labels['Malignancy'].replace({1: 0, 2: 0, 3: 0, 4: 1, 5: 1})
         
