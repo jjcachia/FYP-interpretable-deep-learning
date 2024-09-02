@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.optim import optimizer
 import torch.nn.functional as F
-from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score
+from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score, confusion_matrix, precision_score
 
 def _adjust_weights(task_losses, exponent=2, target_sum=5):
     """
@@ -26,6 +26,10 @@ def _adjust_weights(task_losses, exponent=2, target_sum=5):
     total_weight = sum(weights)
     scaled_weights = [w / total_weight * target_sum for w in weights]
     return scaled_weights
+
+##############################################################################################################################################################
+################################################################      Training Functions      ################################################################
+##############################################################################################################################################################
 
 def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_mask=True, coefs=None, task_weights=None):
     model.to(device)
@@ -56,7 +60,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
         for X, targets, bweights_chars, final_target, bweight in tqdm(data_loader, leave=False):
             X = X.to(device)
             bweights_chars = [b.float().to(device) for b in bweights_chars]            
-            targets = [t.squeeze().to(device) for t in targets]
+            # targets = [t.squeeze().to(device) for t in targets]
+            targets = [t.long().to(device) for t in targets]
             final_target = final_target.float().unsqueeze(1).to(device)
             bweight = bweight.float().unsqueeze(1).to(device)
             
@@ -160,7 +165,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
     final_loss = final_total_loss / n_batches
     final_balanced_accuracy = balanced_accuracy_score(final_targets_all, final_predictions_all)
     final_f1 = f1_score(final_targets_all, final_predictions_all)
-    # final_precision = precision_score(final_targets_all, final_predictions_all)
+    final_precision = precision_score(final_targets_all, final_predictions_all)
     final_recall = recall_score(final_targets_all, final_predictions_all)
     final_auc = roc_auc_score(final_targets_all, final_predictions_all)
 
@@ -175,7 +180,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
                'final_loss': final_loss,
                'final_balanced_accuracy': final_balanced_accuracy,
                'final_f1': final_f1,
-               # 'final_precision': final_precision,
+               'final_precision': final_precision,
                'final_recall': final_recall,
                'final_auc': final_auc
             }
@@ -205,7 +210,11 @@ def test_ppnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_we
     # Print the metrics for the final output
     print(f"Malignancy Prediction - Binary Cross Entropy Loss: {test_metrics['final_loss']:.2f}, Balanced Accuracy: {test_metrics['final_balanced_accuracy']*100:.2f}%, F1 Score: {test_metrics['final_f1']*100:.2f}%")
     return test_metrics
-            
+
+##############################################################################################################################################################
+##############################################################      Gradient Modification      ###############################################################
+##############################################################################################################################################################
+
 def last_only(model):
     for p in model.features.parameters():
         p.requires_grad = False
@@ -247,3 +256,60 @@ def joint(model):
     for p in model.final_classifier.parameters():
         p.requires_grad = False
     
+##############################################################################################################################################################
+##################################################################    Evaluation Functions    ################################################################
+##############################################################################################################################################################
+
+def evaluate_model(data_loader, model, device, indeterminate=False):
+    model.eval()  # Set the model to evaluation mode
+    
+    num_characteristics = model.num_characteristics
+    
+    final_pred_targets = [[] for _ in range(num_characteristics)]
+    final_pred_outputs = [[] for _ in range(num_characteristics)]
+    
+    final_targets = []
+    final_outputs = []
+    
+    with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
+        for X, targets, _, final_target, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
+            X = X.to(device)
+            targets = [t.long().to(device) for t in targets]
+            
+            if indeterminate:
+                final_target = final_target.long().to(device)
+            else:
+                final_target = final_target.float().unsqueeze(1).to(device)
+            
+            final_output, task_outputs, _ = model(X)
+            
+            for i, (task_output, target) in enumerate(zip(task_outputs, targets)):
+                preds = task_output.argmax(dim=1)
+                final_pred_targets[i].extend(target.cpu().numpy())
+                final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
+            
+            if indeterminate:
+                final_preds = final_output.argmax(dim=1)
+            else:
+                final_preds = final_output.round()
+
+            final_targets.extend(final_target.cpu().numpy())
+            final_outputs.extend(preds.detach().cpu().numpy())
+    
+    task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
+    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
+    final_f1 = f1_score(final_targets, final_outputs)
+    final_precision = precision_score(final_targets, final_outputs)
+    final_recall = recall_score(final_targets, final_outputs)
+    final_auc = roc_auc_score(final_targets, final_outputs)
+    conf_matrix = 0# confusion_matrix(final_targets, final_outputs)
+    
+    metrics = {'task_balanced_accuracies': task_balanced_accuracies,
+               'final_balanced_accuracy': final_balanced_accuracy,
+               'final_f1': final_f1,
+               'final_precision': final_precision,
+               'final_recall': final_recall,
+               'final_auc': final_auc
+            }
+    
+    return metrics, conf_matrix

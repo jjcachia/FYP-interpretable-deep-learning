@@ -8,7 +8,7 @@ from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_mode
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
 
-CHOSEN_CHARS = [True, True, False, True, True, False, False, True]
+CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, subtlety, calcification, sphericity, margin, lobulation, spiculation, texture]
 
 DEFAULT_BATCH_SIZE = 25
 DEFAULT_EPOCHS = 100
@@ -61,17 +61,6 @@ def main():
     # Save the script to the experiment directory
     shutil.copy(__file__, os.path.join(paths['scripts'], 'main.py'))
     
-    # Load the labels file
-    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
-    
-    # Check if the labels file includes 3D data
-    if '3D' in labels_file:
-        from src.loaders._3D.dataloader import LIDCDataset
-    elif '2_5D' in labels_file:
-        from src.loaders._2_5D.dataloader import LIDCDataset
-    elif '2D' in labels_file:
-        from src.loaders._2D.dataloader import LIDCDataset
-    
     # Load the model training functions    
     if args.model == 'base':
         from src.training.train_final_prediction import train_step, test_step, evaluate_model, evaluate_model_by_nodule
@@ -96,6 +85,17 @@ def main():
     #################################### Initialize the data loaders ##############################################
     ###############################################################################################################
     print("\n\n" + "#"*100 + "\n\n")
+    
+    # Load the labels file
+    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
+    
+    # Check if the labels file includes 3D data
+    if '3D' in labels_file:
+        from src.loaders._3D.dataloader import LIDCDataset
+    elif '2_5D' in labels_file:
+        from src.loaders._2_5D.dataloader import LIDCDataset
+    elif '2D' in labels_file:
+        from src.loaders._2D.dataloader import LIDCDataset
     
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='train')
@@ -122,7 +122,6 @@ def main():
     torch.cuda.reset_peak_memory_stats()
     torch.cuda.empty_cache()
 
-    # Set the number of epochs (we'll keep this small for faster training times)
     epochs = 100
 
     if args.model not in MODEL_DICT:
@@ -143,7 +142,7 @@ def main():
     if args.model == 'base':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     else:
-        optimizer_specs = [{'params': model.backbone.parameters(), 'lr': args.learning_rate/10},
+        optimizer_specs = [{'params': model.backbone.parameters(), 'lr': args.learning_rate/2},
                             {'params': model.task_specific_layers.parameters(), 'lr': args.learning_rate},
                             {'params': model.task_specific_classifier.parameters(), 'lr': args.learning_rate},
                             {'params': model.final_classifier.parameters(), 'lr': args.learning_rate}]
@@ -164,8 +163,6 @@ def main():
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
     max_val_bacc = float(0)
-    # min_val_loss = float('inf')
-    # task_weights = [1.0/model.num_tasks] * model.num_tasks
     task_weights = None
     for epoch in range(epochs):
         # Print header
@@ -220,34 +217,36 @@ def main():
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)    
     
-    # # Group slices by nodule and evaluate the model on each nodule
-    # from src.evaluation.evaluating import LIDCEvaluationDataset
-    # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
-    # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
-    # print(f"Test Metrics with Median Aggregation:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    #
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    #
-    # print(test_confusion_matrix)
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
+    # Check if labels includes 'central'
+    if 'central' not in labels_file:
+        # Group slices by nodule and evaluate the model on each nodule
+        from src.evaluation.evaluating import LIDCEvaluationDataset
+        LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
+        test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
+
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
+        print(f"Test Metrics with Median Aggregation:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+        print(test_confusion_matrix)
+
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
+        print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+
+        print(test_confusion_matrix)
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
+        print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+        print(test_confusion_matrix)
+
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
+        print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+        print(test_confusion_matrix)
     
     # Save the test metrics to a CSV file
     df_test = pd.DataFrame([test_metrics])

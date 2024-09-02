@@ -247,9 +247,9 @@ def construct_PPNet(
         num_characteristics=num_characteristics,
         proto_layer_rf_info=proto_layer_rf_info,
         num_classes=num_classes,
-        init_weights=True,
         prototype_activation_function=prototype_activation_function,
-        add_on_layers_type=add_on_layers_type
+        add_on_layers_type=add_on_layers_type,
+        init_weights=True
     )
     
     

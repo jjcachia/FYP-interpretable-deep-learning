@@ -189,11 +189,11 @@ def evaluate_model(data_loader, model, device, indeterminate=False):
         for X, targets, _, final_target, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
-
-            final_target = final_target.float().unsqueeze(1).to(device)
             
             if indeterminate:
                 final_target = final_target.long().to(device)
+            else:
+                final_target = final_target.float().unsqueeze(1).to(device)
             
             final_output, task_outputs = model(X)
             
@@ -216,7 +216,7 @@ def evaluate_model(data_loader, model, device, indeterminate=False):
     final_precision = precision_score(final_targets, final_outputs)
     final_recall = recall_score(final_targets, final_outputs)
     final_auc = roc_auc_score(final_targets, final_outputs)
-    confusion_matrix = confusion_matrix(final_targets, final_outputs)
+    conf_matrix = confusion_matrix(final_targets, final_outputs)
     
     metrics = {'task_balanced_accuracies': task_balanced_accuracies,
                'final_balanced_accuracy': final_balanced_accuracy,
@@ -226,7 +226,7 @@ def evaluate_model(data_loader, model, device, indeterminate=False):
                'final_auc': final_auc
             }
     
-    return metrics, confusion_matrix
+    return metrics, conf_matrix
 
 
 def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision_threshold=0.5, std_dev=1.2):
@@ -297,7 +297,7 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
     precision = precision_score(final_targets, final_outputs)
     recall = recall_score(final_targets, final_outputs)
     auc = roc_auc_score(final_targets, final_outputs)
-    confusion_matrix = confusion_matrix(final_targets, final_outputs)
+    conf_matrix = confusion_matrix(final_targets, final_outputs)
     
     metrics = {'final_balanced_accuracy': balanced_accuracy,
                'final_f1': f1,
@@ -307,4 +307,4 @@ def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision
                'task_balanced_accuracies': task_balanced_accuracies
             }
 
-    return metrics, confusion_matrix
+    return metrics, conf_matrix

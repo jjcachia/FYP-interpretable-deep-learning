@@ -66,6 +66,10 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
 
         # Handle batch processing for each characteristic
         for characteristic_index, (global_min_proto_dist, global_min_fmap_patches, proto_rf_box, proto_bound_box) in enumerate(zip(all_global_min_proto_dist, all_global_min_fmap_patches, proto_rf_boxes, proto_bound_boxes)):
+            
+            if root_dir_for_saving_prototypes != None:
+                dir_for_saving_characteristic_prototypes = os.path.join(root_dir_for_saving_prototypes, f"characteristic_{characteristic_index}")
+                
             update_prototypes_on_batch(search_batch_input, 
                                        start_index_of_search_batch,
                                        prototype_network_parallel, 
@@ -78,7 +82,7 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
                                        num_classes=prototype_network_parallel.num_classes,
                                        preprocess_input_function=preprocess_input_function,
                                        prototype_layer_stride=prototype_layer_stride,
-                                       dir_for_saving_prototypes=root_dir_for_saving_prototypes,
+                                       dir_for_saving_prototypes=dir_for_saving_characteristic_prototypes,
                                        prototype_img_filename_prefix=prototype_img_filename_prefix,
                                        prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
                                        prototype_activation_function_in_numpy=prototype_activation_function_in_numpy,
@@ -142,8 +146,6 @@ def update_prototypes_on_batch(search_batch_input,
             img_label = img_y.item()
             class_to_img_index_dict[img_label].append(img_index)
             
-    # print(class_to_img_index_dict)
-
     prototype_shape = prototype_network_parallel.prototype_shape
     n_prototypes = prototype_network_parallel.prototypes_per_characteristic
     proto_h = prototype_shape[2]
