@@ -46,29 +46,6 @@ class denseNet121(nn.Module):
             paddings.append(conv.padding[0])
         return kernel_sizes, strides, paddings
 
-class denseNet169(nn.Module):
-    """ DenseNet169-based Feature Extractor for feature extraction.
-        Total number of parameters:  12688648 (12.69 million) 
-        Returns a feature map of size 1664x3x3. """
-    def __init__(self, weights='DEFAULT', common_channel_size=None):
-        """
-        Initializes the denseNet169 class.
-        
-        Args:
-            weights (str): The weights to use for the DenseNet169 features. Default is 'DEFAULT'.
-            common_channel_size (int): The size of the common channel. Default is None.
-        """
-        super(denseNet169, self).__init__()
-        densenet = models.densenet169(weights=weights)
-        self.features = densenet.features
-
-    def forward(self, x):
-        return self.features(x)
-    
-    def get_output_dims(self):
-        """ Returns the number of output channels from the final convolutional layer. """
-        return 1664, 3, 3
-
 class denseNet201(nn.Module):
     """ DenseNet201-based Feature Extractor for feature extraction.
         Total number of parameters:  18092928 (18.09 million) 
@@ -165,7 +142,7 @@ class efficientNet3D(nn.Module):
        Returns a feature map of size 1280x4x4."""
     def __init__(self, weights='DEFAULT', common_channel_size=None):
         super(efficientNet3D, self).__init__()
-        self.features = EfficientNet3D.from_name("efficientnet-b3", override_params={'include_top': False}, in_channels=1)
+        self.features = EfficientNet3D.from_name("efficientnet-b0", override_params={'include_top': False}, in_channels=1)
 
     def forward(self, x):
         x = self.features(x)
@@ -339,7 +316,7 @@ class efficientFPN3D(nn.Module):
         )
         
         features = efficientnet._feature_extractor(width_mult=width_mult, depth_mult=depth_mult, last_channel=ceil(width_mult * 512))
-        self.features = nn.Sequential([
+        self.features = nn.ModuleList([
                     nn.Sequential(*list(features.children())[0:2]), # 96x16x16x16
                     nn.Sequential(*list(features.children())[2:4]), # 128x8x8x8
                     nn.Sequential(*list(features.children())[4:7]), # 192x4x4x4
@@ -349,11 +326,10 @@ class efficientFPN3D(nn.Module):
         
         def forward(self, x):
             x = self.first_layer(x)
-            output = self.features(x)
-            # outputs = []
-            # for feature in self.features:
-            #     x = feature(x)
-            #     outputs.append(x)
+            outputs = []
+            for feature in self.features:
+                x = feature(x)
+                outputs.append(x)
             return outputs
         
 ############################################################################################################################################################################

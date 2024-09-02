@@ -1,20 +1,19 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from src.models.backbone_models import denseNet121, denseNet169, denseNet201, resNet34, resNet152, vgg16, vgg19, denseFPN_121, denseFPN_201, efficientFPN_v2_s
+import numpy as np
+
+from src.models.backbone_models import denseNet121, denseNet201, resNet34, resNet152, vgg16, vgg19, efficientNet3D
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
     'denseNet121': denseNet121,
-    'denseNet169': denseNet169,
     'denseNet201': denseNet201,
     'resNet34': resNet34,
     'resNet152': resNet152,
     'vgg16': vgg16,
     'vgg19': vgg19,
-    'denseFpn121': denseFPN_121,
-    'denseFpn201': denseFPN_201,
-    'efficientFpn': efficientFPN_v2_s
+    'efficientNet3D': efficientNet3D
 }
 
 
@@ -23,23 +22,36 @@ BACKBONE_DICT = {
 ############################################################################################################################################################################
 
 class BaseModel(nn.Module):
-    def __init__(self, backbone, weights, common_channel_size, hidden_layers):
+    def __init__(self, backbone, weights, common_channel_size, hidden_layers, indeterminate=False):
         super(BaseModel, self).__init__()        
         self.backbone = backbone(weights=weights)
+        self.indeterminate = indeterminate
         
-        # cnn_backbone_output_channel_size = self.backbone.get_output_channels()
-        out_C, out_H, out_W = self.backbone.get_output_dims()
+        features_dims = np.array(self.backbone.get_output_dims()) # [C, (D), H, W]
         
-        self.add_on_layers = nn.Sequential(
-            nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
-            nn.Dropout(0.2)
-        )
+        self.feature_size = dims.size
+        if self.feature_size == 3:
+            self.add_on_layers = nn.Sequential(
+                nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
+                nn.BatchNorm2d(512),
+                nn.ReLU(),
+                nn.Dropout(0.2)
+            )
+        elif self.feature_size == 4:
+            self.add_on_layers = nn.Sequential(
+                nn.Conv3d(in_channels=out_C, out_channels=512, kernel_size=1),
+                nn.BatchNorm3d(512),
+                nn.ReLU(),
+                nn.Dropout3d(0.2)
+            )
         
+        out_dims = np.array([512] + list(output_dims[1:])) # [512, (D), H, W]
+        num_features = np.prod(out_dims) # 512 * (D) * H * W
+        
+        num_logits = 1 if not self.indeterminate else 3
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(512*out_H*out_W, hidden_layers),
+            nn.Linear(num_features, hidden_layers),
             nn.BatchNorm1d(hidden_layers),
             nn.ReLU(),
             nn.Dropout(0.2), # 0.2
@@ -53,12 +65,16 @@ class BaseModel(nn.Module):
         x = self.add_on_layers(x)
         
         # Final Malignancy Prediction
-        final_output = torch.sigmoid(self.final_classifier(x))
+        if self.indeterminate:
+            final_output = self.final_classifier(concatenated_outputs)
+        else:
+            final_output = torch.sigmoid(self.final_classifier(concatenated_outputs))
         
         return final_output
 
 
-def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_channel_size=None, hidden_layers=1024):
+def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_channel_size=None, hidden_layers=1024, indeterminate=False,
+                        num_tasks=None, num_classes=None):
     """
     Constructs a base model for Malignancy Prediction.
 
@@ -77,4 +93,4 @@ def construct_baseModel(backbone_name='denseFPN_121', weights='DEFAULT', common_
     if backbone_name not in BACKBONE_DICT:
         raise ValueError(f"Unsupported model name {backbone_name}")
     backbone = BACKBONE_DICT[backbone_name]
-    return BaseModel(backbone=backbone, weights=weights, common_channel_size=common_channel_size, hidden_layers=hidden_layers)
+    return BaseModel(backbone=backbone, weights=weights, common_channel_size=common_channel_size, hidden_layers=hidden_layers, indeterminate=indeterminate)

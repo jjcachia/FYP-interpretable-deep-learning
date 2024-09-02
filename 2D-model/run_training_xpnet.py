@@ -27,7 +27,7 @@ MODEL_DICT = {
 # TODO: Add number of prototypes as a parameter, prototype size, and more 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseFPN_121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--backbone', type=str, default='denseNet_121', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='xpnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
@@ -75,39 +75,19 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
 
     # labels_file = './dataset/Meta/meta_info_old.csv'
-    labels_file = os.path.join(script_dir, 'dataset', 'Meta', 'meta_info_old.csv')
-
-    mean = (0.5, 0.5, 0.5)
-    std = (0.5, 0.5, 0.5)
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
 
     # train set
-    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
-                                                                        transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]),
-                                                            train=True)
-    train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='train')
+    train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
-    # push set
-    LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
-                                                                        transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]), train=True, push=True)
-    push_dataloader = torch.utils.data.DataLoader(LIDC_pushset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    # validation set
+    LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='val')
+    val_dataloader = torch.utils.data.DataLoader(LIDC_valset, batch_size=args.batch_size, shuffle=True, num_workers=0)
     
     # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=DEFAULT_CHARS, auto_split=True, zero_indexed=False, 
-                                                            transform=transforms.Compose([transforms.Grayscale(num_output_channels=args.img_channels), 
-                                                                        transforms.Resize(size=(args.img_size, args.img_size), interpolation=Image.BILINEAR), 
-                                                                        transforms.ToTensor(), 
-                                                                        transforms.Normalize(mean, std)
-                                                                        ]),
-                                                            train=False)
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     batch_images = next(iter(train_dataloader))
 

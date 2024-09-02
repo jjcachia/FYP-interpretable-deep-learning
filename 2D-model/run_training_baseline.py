@@ -4,16 +4,10 @@ import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn a
 import numpy as np
 
 from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
-from src.loaders._3D.dataloader import LIDCDataset
-# from src.training.train_final_prediction import train_step, test_step, evaluate_model
-from src.training.train_hierarchical import train_step, test_step, evaluate_model, evaluate_model_by_nodule
+
 from src.models.base_model import construct_baseModel
 from src.models.baseline_model import construct_baselineModel
-from src.evaluation.evaluating import LIDCEvaluationDataset
 
-
-IMG_CHANNELS = 3
-IMG_SIZE = 100
 CHOSEN_CHARS = [True, True, False, True, True, False, False, True]
 
 DEFAULT_BATCH_SIZE = 25
@@ -32,9 +26,8 @@ def parse_args():
     parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
     parser.add_argument('--model', type=str, default='baseline', help='Model to train')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
-    
-    parser.add_argument('--img_channels', type=int, default=IMG_CHANNELS, help='Number of channels in the input image')
-    parser.add_argument('--img_size', type=int, default=IMG_SIZE, help='Size of the input image')
+    parser.add_argument('--classes', type=int, default=2, help='Number of classes to predict')
+    parser.add_argument('--indeterminate', type=bool, default=False, help='Whether to predict indeterminate nodules')
     
     parser.add_argument('--device', type=str, default='0', help='GPU device to use')
     parser.add_argument('--batch_size', type=int, default=DEFAULT_BATCH_SIZE, help='Batch size for training')
@@ -68,6 +61,23 @@ def main():
     # Save the script to the experiment directory
     shutil.copy(__file__, os.path.join(paths['scripts'], 'main.py'))
     
+    # Load the labels file
+    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
+    
+    # Check if the labels file includes 3D data
+    if '3D' in labels_file:
+        from src.loaders._3D.dataloader import LIDCDataset
+    elif '2_5D' in labels_file:
+        from src.loaders._2_5D.dataloader import LIDCDataset
+    elif '2D' in labels_file:
+        from src.loaders._2D.dataloader import LIDCDataset
+    
+    # Load the model training functions    
+    if args.model == 'base':
+        from src.training.train_final_prediction import train_step, test_step, evaluate_model, evaluate_model_by_nodule
+    elif args.model == 'baseline':
+        from src.training.train_hierarchical import train_step, test_step, evaluate_model, evaluate_model_by_nodule
+    
     # Check if CUDA is available
     print("#"*100 + "\n\n")
     if torch.cuda.is_available():
@@ -86,27 +96,22 @@ def main():
     #################################### Initialize the data loaders ##############################################
     ###############################################################################################################
     print("\n\n" + "#"*100 + "\n\n")
-
-    # labels_file = './dataset/Meta/meta_info_old.csv'
-    # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
-    # labels_file = os.path.join(script_dir, 'dataset', '2_5D', 'Meta', 'adjacent_slices_labels.csv')
-    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'filtered_volume_labels.csv')
     
     # train set
-    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='train')
+    LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='train')
     train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # validation set
-    LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='val')
+    LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='val')
     val_dataloader = torch.utils.data.DataLoader(LIDC_valset, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    
-    # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     batch_images = next(iter(train_dataloader))
 
-    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x {batch_images[0].shape[4]} (NCHW)\n")
+    if batch_images[0].shape > 4:
+        print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x {batch_images[0].shape[4]} (NCDHW)\n")
+    else:
+        print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} (NCHW)\n")
+        
     print(f"Number of Characteristics: {len(batch_images[1])}")
 
     ###############################################################################################################
@@ -125,8 +130,15 @@ def main():
     construct_Model = MODEL_DICT[args.model]
     if args.weights == 'None':
         args.weights = None
+    
     # Create the model instance
-    model = construct_Model(backbone_name=args.backbone, weights=args.weights)
+    model = construct_Model(
+        backbone_name=args.backbone, 
+        weights=args.weights, 
+        num_tasks=len(CHOSEN_CHARS), 
+        num_classes=args.classes,
+        indeterminate=args.indeterminate
+    )
     
     if args.model == 'base':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
@@ -199,75 +211,40 @@ def main():
     model.load_state_dict(load_model_from_chunks(best_model_path))
     
     # Evaluate the model on each slice
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    
     test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
     print(f"Test Metrics:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)    
     
-    # Group slices by nodule and evaluate the model on each nodule
-    # test set
+    # # Group slices by nodule and evaluate the model on each nodule
+    # from src.evaluation.evaluating import LIDCEvaluationDataset
     # LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
     # test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
     # 
-    # # Evaluate the model on the test set
     # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
     # print(f"Test Metrics with Median Aggregation:")
     # print(test_metrics)
     # print("Test Confusion Matrix:")
     # print(test_confusion_matrix)
-# 
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
-    # print(f"Test Metrics with Median Aggregation:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
- # 
+    #
     # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
     # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
     # print(test_metrics)
     # print("Test Confusion Matrix:")
+    #
     # print(test_confusion_matrix)
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.8)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.8:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
     # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
     # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
     # print(test_metrics)
     # print("Test Confusion Matrix:")
     # print(test_confusion_matrix)
     # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.2)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.2:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
     # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
     # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.6)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.6:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.8)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.8:")
-    # print(test_metrics)
-    # print("Test Confusion Matrix:")
-    # print(test_confusion_matrix)
-    # 
-    # test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=2.0)
-    # print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 2.0:")
     # print(test_metrics)
     # print("Test Confusion Matrix:")
     # print(test_confusion_matrix)

@@ -4,27 +4,24 @@ import torch.nn.functional as F
 from torchvision import models
 
 from src.utils.receptive_field import compute_proto_layer_rf_info_v2
-from src.models.backbone_models import denseFPN_121, denseFPN_201, efficientFPN_v2_s, efficientDecoder_v2_s, denseNet121, denseNet201
+from src.models.backbone_models import denseNet121, denseNet201, denseFPN_121, denseFPN_201
 
 # Dictionary of supported backbone models
 BACKBONE_DICT = {
     'denseNet121': denseNet121,
     'denseNet201': denseNet201,
-    'efficientNetV2_s': models.efficientnet_v2_s(weights='DEFAULT').features[:-1],
     'denseFPN_121': denseFPN_121,
     'denseFPN_201': denseFPN_201,
-    'efficientFPN_v2_s': efficientFPN_v2_s,
-    'efficientDecoder_v2_s': efficientDecoder_v2_s
 }
 
 class PPNet(nn.Module):
-    def __init__(self, features, img_size, prototype_shape, num_characteristics, proto_layer_rf_info=None, init_weights=True, prototype_activation_function='log', add_on_layers_type='bottleneck'):
+    def __init__(self, features, img_size, prototype_shape, num_characteristics, num_classes, proto_layer_rf_info=None, init_weights=True, prototype_activation_function='log', add_on_layers_type='bottleneck'):
         super(PPNet, self).__init__()
         # Define the input configurations
         self.img_size = img_size # size of the input images (e.g. (3, 224, 224))
         self.prototype_shape = prototype_shape # shape of the prototype vectors (e.g. (2000, 512, 1, 1))
         self.num_characteristics = num_characteristics # number of characteristics to predict (e.g. shape, margin, etc.)
-        self.num_classes = 2 # binary classification
+        self.num_classes = num_classes # binary classification
         
         self.num_prototypes = self.prototype_shape[0] # total number of prototypes
         self.prototypes_per_characteristic = self.num_prototypes // self.num_characteristics # number of prototypes per characteristic
@@ -41,7 +38,7 @@ class PPNet(nn.Module):
         self.features = features
         
         # Define the add-on layers
-        first_add_on_layer_in_channels = features.get_output_channels()
+        first_add_on_layer_in_channels, _, _ = features.get_output_dims()
         
         # self.add_on_layers = self.initialize_add_on_layers(first_add_on_layer_in_channels, add_on_layers_type)
         if add_on_layers_type == 'bottleneck':
@@ -88,13 +85,6 @@ class PPNet(nn.Module):
         
         self.final_classifier = nn.Sequential(
             nn.Flatten(),
-            # nn.BatchNorm1d(self.num_characteristics*self.prototypes_per_characteristic),
-            # nn.ReLU(),
-            # nn.Dropout(0.2),
-            # nn.Linear(self.num_characteristics*self.prototypes_per_characteristic*12*12, self.num_characteristics*self.num_classes), # HxW is the output size of the feature extractor
-            # nn.BatchNorm1d(self.num_characteristics*self.num_classes),
-            # nn.ReLU(),
-            # nn.Dropout(0.2),
             nn.Linear(self.num_characteristics*self.prototypes_per_characteristic, self.num_characteristics*self.num_classes),
             nn.BatchNorm1d(self.num_characteristics*self.num_classes),
             nn.ReLU(),
@@ -210,7 +200,6 @@ class PPNet(nn.Module):
             # task_probabilities.append(task_probability)
         
         # Concatenate task distances for the final classifier
-        # final_output = torch.sigmoid(self.final_classifier(torch.cat(distances, dim=1))) # TODO: Use intermediate task logits instead of distances and feature extractor output
         final_output = torch.sigmoid(self.final_classifier(torch.cat(similarities, dim=1)))
         return final_output, task_logits, min_distances
     
@@ -234,6 +223,7 @@ def construct_PPNet(
     img_size=224,
     prototype_shape=(50*5*2, 224, 1, 1), 
     num_characteristics=5,
+    num_classes=2,
     prototype_activation_function='log',
     add_on_layers_type='bottleneck'
 ):
@@ -256,6 +246,7 @@ def construct_PPNet(
         prototype_shape=prototype_shape,
         num_characteristics=num_characteristics,
         proto_layer_rf_info=proto_layer_rf_info,
+        num_classes=num_classes,
         init_weights=True,
         prototype_activation_function=prototype_activation_function,
         add_on_layers_type=add_on_layers_type
