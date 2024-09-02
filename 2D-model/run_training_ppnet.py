@@ -242,9 +242,9 @@ def main():
         
         all_val_metrics.append(val_metrics)
         
-        # if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
-        #     max_val_bacc = val_metrics['final_balanced_accuracy']
-        #     save_model_in_chunks(model.state_dict(), best_model_path)
+        if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
+            max_val_bacc = val_metrics['final_balanced_accuracy']
+            save_model_in_chunks(model.state_dict(), best_model_path)
         
         # Push step
         if epoch >= push_start and epoch in push_epochs:

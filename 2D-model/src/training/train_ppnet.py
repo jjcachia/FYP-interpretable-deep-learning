@@ -294,7 +294,7 @@ def evaluate_model(data_loader, model, device, indeterminate=False):
                 final_preds = final_output.round()
 
             final_targets.extend(final_target.cpu().numpy())
-            final_outputs.extend(preds.detach().cpu().numpy())
+            final_outputs.extend(final_preds.detach().cpu().numpy())
     
     task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
     final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
