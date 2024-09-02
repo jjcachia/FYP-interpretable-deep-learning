@@ -139,7 +139,7 @@ def main():
         weights=args.weights,
         img_size=100,
         prototype_shape=DEFAULT_PROTOTYPE_SHAPE,
-        num_characteristics=DEFAULT_NUM_CHARS,
+        num_characteristics=5,
         num_classes=DEFAULT_NUM_CLASSES,
         prototype_activation_function='log', 
         add_on_layers_type='regular'
