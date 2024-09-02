@@ -12,8 +12,8 @@ CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, 
 DEFAULT_NUM_CHARS = sum(CHOSEN_CHARS)
 DEFAULT_NUM_CLASSES = 2
 DEFAULT_NUM_PROTOTYPES_PER_CLASS = 10
-# DEFAULT_PROTOTYPE_SHAPE = (DEFAULT_NUM_PROTOTYPES_PER_CLASS*CHOSEN_CHARS*DEFAULT_NUM_CLASSES, 128, 2, 2)
-DEFAULT_PROTOTYPE_SHAPE = (10*2*DEFAULT_NUM_CHARS, 128, 1, 1)
+DEFAULT_PROTOTYPE_SHAPE = (DEFAULT_NUM_PROTOTYPES_PER_CLASS*DEFAULT_NUM_CHARS*DEFAULT_NUM_CLASSES, 128, 1, 1)
+# DEFAULT_PROTOTYPE_SHAPE = (10*2*DEFAULT_NUM_CHARS, 128, 1, 1)
 
 DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
@@ -159,8 +159,8 @@ def main():
     last_layer_optimizer_lr = 1e-4 # 5e-4
     
     warm_optimizer_specs = \
-    [{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
-    {'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    [#{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    #{'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
     ]
