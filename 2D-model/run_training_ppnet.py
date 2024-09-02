@@ -137,7 +137,7 @@ def main():
     model = construct_Model(
         base_architecture=args.backbone, 
         weights=args.weights,
-        img_size=args.img_size,
+        img_size=100,
         prototype_shape=DEFAULT_PROTOTYPE_SHAPE,
         num_characteristics=DEFAULT_NUM_CHARS,
         num_classes=DEFAULT_NUM_CLASSES,
