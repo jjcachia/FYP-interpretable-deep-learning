@@ -88,7 +88,7 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
     
     # Load the labels file
-    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
     
     # Check if the labels file includes 3D data
     if '3D' in labels_file:
