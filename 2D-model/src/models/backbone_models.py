@@ -69,6 +69,16 @@ class denseNet201(nn.Module):
         """ Returns the number of output channels from the final convolutional layer. """
         return 1920, 3, 3
     
+    def conv_info(self):
+        """ Returns a list of dicts containing kernel sizes, strides, and paddings for each convolutional layer. """
+        conv_layers = [layer for layer in self.features.modules() if isinstance(layer, nn.Conv2d)]
+        kernel_sizes, strides, paddings = [], [], []
+        for conv in conv_layers:
+            kernel_sizes.append(conv.kernel_size[0])
+            strides.append(conv.stride[0])
+            paddings.append(conv.padding[0])
+        return kernel_sizes, strides, paddings
+    
 class resNet34(nn.Module):
     """ ResNet34-based Feature Extractor for feature extraction.
         Total number of parameters:  21797672 (21.80 million) 
