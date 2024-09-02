@@ -302,7 +302,7 @@ def evaluate_model(data_loader, model, device, indeterminate=False):
     final_precision = precision_score(final_targets, final_outputs)
     final_recall = recall_score(final_targets, final_outputs)
     final_auc = roc_auc_score(final_targets, final_outputs)
-    conf_matrix = 0# confusion_matrix(final_targets, final_outputs)
+    conf_matrix = confusion_matrix(final_targets, final_outputs)
     
     metrics = {'task_balanced_accuracies': task_balanced_accuracies,
                'final_balanced_accuracy': final_balanced_accuracy,

@@ -1,4 +1,6 @@
 import os, time, gc, argparse, shutil
+import pandas as pd
+import numpy as np
 from PIL import Image
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
@@ -240,6 +242,10 @@ def main():
         
         all_val_metrics.append(val_metrics)
         
+        # if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
+        #     max_val_bacc = val_metrics['final_balanced_accuracy']
+        #     save_model_in_chunks(model.state_dict(), best_model_path)
+        
         # Push step
         if epoch >= push_start and epoch in push_epochs:
             print(f"\nPushing prototypes at epoch {epoch}\n")
@@ -276,11 +282,10 @@ def main():
                                               device=device,
                                               coefs=coefs)
                 all_val_metrics.append(val_metrics)
-                    
-        
-        if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
-            max_val_bacc = val_metrics['final_balanced_accuracy']
-            save_model_in_chunks(model.state_dict(), best_model_path)
+                
+                if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
+                    max_val_bacc = val_metrics['final_balanced_accuracy']
+                    save_model_in_chunks(model.state_dict(), best_model_path)
 
         epoch_end = time.time()  # End time of the current epoch
         print(f"\nEpoch {epoch + 1} completed in {epoch_end - epoch_start:.2f} seconds")  
@@ -294,6 +299,16 @@ def main():
     ################################### Evaluate the model on the test set ########################################
     ###############################################################################################################
     print("\n\n" + "#"*100 + "\n\n")
+    # Evaluate the model on each slice
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    
+    _ = tnt.test_ppnet(data_loader=test_dataloader, model=model, device=device, coefs=coefs)
+    test_metrics, test_confusion_matrix = tnt.evaluate_model(test_dataloader, model, device)
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix) 
     
     # Load the best model
     model.load_state_dict(load_model_from_chunks(best_model_path))
@@ -303,7 +318,7 @@ def main():
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
     
     test_metrics, test_confusion_matrix = tnt.evaluate_model(test_dataloader, model, device)
-    print(f"Test Metrics:")
+    print(f"Test Metrics, Best Model:")
     print(test_metrics)
     print("Test Confusion Matrix:")
     print(test_confusion_matrix)  
