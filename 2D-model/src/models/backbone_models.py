@@ -158,7 +158,7 @@ class vgg19(nn.Module):
 
 ############################################################################################################################################################################
 ########################################################################## Base 3D CNN Networks ############################################################################
-############################################################################################################################################################################
+############################################################################################################################################################################ 
 
 class efficientNet3D(nn.Module):
     """EfficientNet3D-based Feature Extractor for feature extraction.
@@ -326,7 +326,36 @@ class EfficeientNet3d(nn.Module):
         x = self.features(out)
         return out
 
-
+class efficientFPN3D(nn.Module):
+    def __init__(self):
+        super(efficientFPN3D, self).__init__()
+        width_mult = 1
+        depth_mult = 1
+        efficientnet = EfficeientNet3d()
+        self.first_layer = nn.Sequential(
+                efficientnet.first_layer,
+                efficientnet.pool,
+                # features.features
+        )
+        
+        features = efficientnet._feature_extractor(width_mult=width_mult, depth_mult=depth_mult, last_channel=ceil(width_mult * 512))
+        self.features = nn.Sequential([
+                    nn.Sequential(*list(features.children())[0:2]), # 96x16x16x16
+                    nn.Sequential(*list(features.children())[2:4]), # 128x8x8x8
+                    nn.Sequential(*list(features.children())[4:7]), # 192x4x4x4
+                    nn.Sequential(*list(features.children())[7:8]), # 256x4x4x4
+                    nn.Sequential(*list(features.children())[8:])  # 512x4x4x4
+        ])
+        
+        def forward(self, x):
+            x = self.first_layer(x)
+            output = self.features(x)
+            # outputs = []
+            # for feature in self.features:
+            #     x = feature(x)
+            #     outputs.append(x)
+            return outputs
+        
 ############################################################################################################################################################################
 ######################################################################### Feature Pyramid Networks #########################################################################
 ############################################################################################################################################################################
