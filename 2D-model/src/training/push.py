@@ -60,7 +60,7 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
     search_batch_size = dataloader.batch_size
     num_classes = prototype_network_parallel.num_classes
 
-    for push_iter, (search_batch_input, search_y_chars, _, _, _) in enumerate(dataloader): # TODO: add TQDM support
+    for push_iter, (search_batch_input, search_y_chars, _, _, _, _) in enumerate(dataloader): # TODO: add TQDM support
         search_batch_size = search_batch_input.shape[0]
         start_index_of_search_batch = push_iter * search_batch_size
 
