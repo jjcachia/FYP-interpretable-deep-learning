@@ -255,7 +255,7 @@ def joint(model):
     for p in model.features.parameters():
         p.requires_grad = True
     for p in model.add_on_layers_module.parameters():
-        p.requires_grad = True
+        p.requires_grad = False
     for p in model.occurrence_module.parameters():
             p.requires_grad = True
     model.prototype_vectors.requires_grad = True
