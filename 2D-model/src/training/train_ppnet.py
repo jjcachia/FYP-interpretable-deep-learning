@@ -227,16 +227,16 @@ def last_only(model):
         p.requires_grad = True # was true
 
 def warm_only(model):
-    if model.features.encoder is not None:
-        for p in model.features.encoder.parameters():
-            p.requires_grad = False
-        for p in model.features.adaptation_layers.parameters():
-            p.requires_grad = True
-        for p in model.features.fpn.parameters():
-            p.requires_grad = True
-    else:
-        for p in model.features.parameters():
-            p.requires_grad = False
+    # if model.features.encoder is not None:
+    #     for p in model.features.encoder.parameters():
+    #         p.requires_grad = False
+    #     for p in model.features.adaptation_layers.parameters():
+    #         p.requires_grad = True
+    #     for p in model.features.fpn.parameters():
+    #         p.requires_grad = True
+    # else:
+    for p in model.features.parameters():
+        p.requires_grad = False
     for p in model.add_on_layers.parameters():
         p.requires_grad = True
     model.prototype_vectors.requires_grad = True
