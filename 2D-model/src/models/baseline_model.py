@@ -35,14 +35,14 @@ class BaselineModel(nn.Module):
         self.feature_size = features_dims.size
         if self.feature_size == 3:
             self.add_on_layers = nn.Sequential(
-                nn.Conv2d(in_channels=out_C, out_channels=512, kernel_size=1),
+                nn.Conv2d(in_channels=features_dims[0], out_channels=512, kernel_size=1),
                 nn.BatchNorm2d(512),
                 nn.ReLU(),
                 nn.Dropout(0.2)
             )
         elif self.feature_size == 4:
             self.add_on_layers = nn.Sequential(
-                nn.Conv3d(in_channels=out_C, out_channels=512, kernel_size=1),
+                nn.Conv3d(in_channels=features_dims[0], out_channels=512, kernel_size=1),
                 nn.BatchNorm3d(512),
                 nn.SiLU(),
                 nn.Dropout3d(0.2)
