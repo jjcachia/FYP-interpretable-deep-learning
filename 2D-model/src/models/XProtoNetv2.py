@@ -9,25 +9,25 @@ class XProtoNet(PPNet):
     def __init__(self, **kwargs):
         super(XProtoNet, self).__init__(**kwargs)
 
-        # self.cnn_backbone = self.features
-        # del self.features
+        self.cnn_backbone = self.features
+        del self.features
 
         # cnn_backbone_out_channels = self.features.get_output_channels()
         
-        cnn_backbone_out_channels, _, _ = self.features.get_output_dims()
+        cnn_backbone_out_channels, _, _ = self.cnn_backbone.get_output_dims()
         
         # feature extractor module
-        # self.add_on_layers = torch.nn.Sequential(*list(self.add_on_layers.children())[:-1])
-        self.add_on_layers_module = nn.ModuleList([
-            nn.Sequential(
-                nn.Conv2d(in_channels=cnn_backbone_out_channels, out_channels=self.prototype_shape[1], kernel_size=1),
-                nn.BatchNorm2d(self.prototype_shape[1]),
-                nn.ReLU(),
-                nn.Dropout(0.2),
-                nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
-                nn.Sigmoid()
-            ) for _ in range(self.num_characteristics)
-        ])
+        self.add_on_layers = torch.nn.Sequential(*list(self.add_on_layers.children())[:-1])
+        # self.add_on_layers_module = nn.ModuleList([
+        #     nn.Sequential(
+        #         nn.Conv2d(in_channels=cnn_backbone_out_channels, out_channels=self.prototype_shape[1], kernel_size=1),
+        #         nn.BatchNorm2d(self.prototype_shape[1]),
+        #         nn.ReLU(),
+        #         nn.Dropout(0.2),
+        #         nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
+        #         nn.Sigmoid()
+        #     ) for _ in range(self.num_characteristics)
+        # ])
         # self._initialize_weights(self.add_on_layers)
 
         # Occurrence map module
@@ -76,15 +76,14 @@ class XProtoNet(PPNet):
 
     def forward(self, x):
         # Feature Extractor Layer
-        x = self.features(x)
+        x = self.cnn_backbone(x)
+        feature_map = self.add_on_layers(x).unsqueeze(1)  # shape (N, 1, 128, H, W)
         
         # Hierarchical Prototype Layer
         task_logits = []
         similarities = []
         occurrence_maps = []
         for i in range(self.num_characteristics):
-            feature_map = self.add_on_layers_module[i](x).unsqueeze(1)  # shape (N, 1, 128, H, W)
-            
             occurrence_map = self.get_occurence_map_absolute_val(x, i)  # shape (N, P, 1, H, W)
             
             features_extracted = (occurrence_map * feature_map).sum(dim=3).sum(dim=3)  # shape (N, P, 128)
@@ -111,7 +110,7 @@ class XProtoNet(PPNet):
 
     def compute_occurence_map(self, x, characteristic_index):
         # Feature Extractor Layer
-        x = self.features(x)
+        x = self.cnn_backbone(x)
         occurrence_map = self.get_occurence_map_absolute_val(x, characteristic_index)  # shape (N, P, 1, H, W)
         return occurrence_map
 
@@ -132,14 +131,15 @@ class XProtoNet(PPNet):
         this method is needed for the pushing operation
         """
         # Feature Extractor Layer
-        x = self.features(x)
+        x = self.cnn_backbone(x)
+        feature_map = self.add_on_layers(x).unsqueeze(1)  # shape (N, 1, 128, H, W)
         
         features_extracted_list = []
         inverted_similarity_list = []
         occurrence_map_list = []
         preds_list = []
         for characteristic_index in range(self.num_characteristics):
-            feature_map = self.add_on_layers_module[characteristic_index](x).unsqueeze(1)  # shape (N, 1, 128, H, W)
+            
             occurrence_map = self.get_occurence_map_absolute_val(x,characteristic_index)  # shape (N, P, 1, H, W)
             features_extracted = (occurrence_map * feature_map).sum(dim=3).sum(dim=3)  # shape (N, P, 128)
 

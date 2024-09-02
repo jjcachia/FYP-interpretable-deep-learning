@@ -214,7 +214,7 @@ def test_xpnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_we
 def last_only(model):
     for p in model.features.parameters():
         p.requires_grad = False
-    for p in model.add_on_layers_module.parameters():
+    for p in model.add_on_layers.parameters():
         p.requires_grad = False
     for p in model.occurrence_module.parameters():
         p.requires_grad = False
@@ -238,7 +238,7 @@ def warm_only(model):
     # else:
     for p in model.features.parameters():
         p.requires_grad = False
-    for p in model.add_on_layers_module.parameters():
+    for p in model.add_on_layers.parameters():
         p.requires_grad = True
     for p in model.occurrence_module.parameters():
             p.requires_grad = True
@@ -254,7 +254,7 @@ def warm_only(model):
 def joint(model):
     for p in model.features.parameters():
         p.requires_grad = True
-    for p in model.add_on_layers_module.parameters():
+    for p in model.add_on_layers.parameters():
         p.requires_grad = True
     for p in model.occurrence_module.parameters():
             p.requires_grad = True
