@@ -13,7 +13,9 @@ class XProtoNet(PPNet):
         # del self.features
         # cnn_backbone_out_channels = self.cnn_backbone.get_output_channels()
 
-        cnn_backbone_out_channels = self.features.get_output_channels()
+        # cnn_backbone_out_channels = self.features.get_output_channels()
+        
+        cnn_backbone_out_channels, _, _ = self.features.get_output_dims()
         
         # feature extractor module
         # self.add_on_layers = torch.nn.Sequential(*list(self.add_on_layers.children())[:-1])
@@ -77,7 +79,6 @@ class XProtoNet(PPNet):
             nn.Dropout(0.2),
             nn.Linear(256, 1)
         )
-            
         
         self._set_last_layer_incorrect_connection(incorrect_strength=-0.5)
 
@@ -183,24 +184,26 @@ def construct_XPNet(
     img_size=100,
     prototype_shape=(10*4*2, 128, 1, 1),
     num_characteristics=4,
+    num_classes=2,
     prototype_activation_function="log",
     add_on_layers_type="regular",
 ):
     features = BACKBONE_DICT[base_architecture](weights=weights)
-    layer_filter_sizes, layer_strides, layer_paddings = features.conv_info()
-    proto_layer_rf_info = compute_proto_layer_rf_info_v2(
-        img_size=img_size,
-        layer_filter_sizes=layer_filter_sizes,
-        layer_strides=layer_strides,
-        layer_paddings=layer_paddings,
-        prototype_kernel_size=prototype_shape[2],
-    )
+    # layer_filter_sizes, layer_strides, layer_paddings = features.conv_info()
+    # proto_layer_rf_info = compute_proto_layer_rf_info_v2(
+    #     img_size=img_size,
+    #     layer_filter_sizes=layer_filter_sizes,
+    #     layer_strides=layer_strides,
+    #     layer_paddings=layer_paddings,
+    #     prototype_kernel_size=prototype_shape[2],
+    # )
     return XProtoNet(
         features=features,
         img_size=img_size,
         prototype_shape=prototype_shape,
-        proto_layer_rf_info=proto_layer_rf_info,
+        # proto_layer_rf_info=proto_layer_rf_info,
         num_characteristics=num_characteristics,
+        num_classes=num_classes,
         init_weights=True,
         prototype_activation_function=prototype_activation_function,
         add_on_layers_type=add_on_layers_type,

@@ -61,7 +61,6 @@ def main():
 
     # Prototype push path
     push_dir = paths['prototypes']
-    
 
     # Save the script to the experiment directory
     shutil.copy(__file__, os.path.join(paths['scripts'], 'main.py'))
@@ -86,25 +85,37 @@ def main():
     #################################### Initialize the data loaders ##############################################
     ###############################################################################################################
     print("\n\n" + "#"*100 + "\n\n")
-
-    # labels_file = './dataset/Meta/meta_info_old.csv'
+    
+    # Load the labels file
     labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_central_slice_labels.csv')
-
+    
+    # Check if the labels file includes 3D data
+    if '3D' in labels_file:
+        from src.loaders._3D.dataloader import LIDCDataset
+    elif '2_5D' in labels_file:
+        from src.loaders._2_5D.dataloader import LIDCDataset
+    elif '2D' in labels_file:
+        from src.loaders._2D.dataloader import LIDCDataset
+    
     # train set
     LIDC_trainset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='train')
     train_dataloader = torch.utils.data.DataLoader(LIDC_trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    
+    # push set
+    LIDC_pushset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='push')
+    push_dataloader = torch.utils.data.DataLoader(LIDC_pushset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     # validation set
     LIDC_valset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='val')
     val_dataloader = torch.utils.data.DataLoader(LIDC_valset, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    
-    # test set
-    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     batch_images = next(iter(train_dataloader))
 
-    print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} (NCHW)\n")
+    if '3D' in labels_file:
+        print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} x {batch_images[0].shape[4]} (NCDHW)\n")
+    else:
+        print(f"Batch Size: {batch_images[0].shape[0]}, Number of Channels: {batch_images[0].shape[1]}, Image Size: {batch_images[0].shape[2]} x {batch_images[0].shape[3]} (NCHW)\n")
+        
     print(f"Number of Characteristics: {len(batch_images[1])}")
 
     ###############################################################################################################
@@ -127,6 +138,7 @@ def main():
         img_size=args.img_size,
         prototype_shape=DEFAULT_PROTOTYPE_SHAPE,
         num_characteristics=DEFAULT_NUM_CHARS,
+        num_classes=DEFAULT_NUM_CLASSES,
         prototype_activation_function='log', 
         add_on_layers_type='regular'
     )
@@ -140,19 +152,19 @@ def main():
     ###############################################################################################################
     
     joint_optimizer_lrs = {
-        'features': 5e-5,
-        'add_on_layers': 1e-4,
-        'occurrence': 1e-4,
-        'prototype_vectors': 1e-4,
-        'final_add_on_layers': 1e-4
+        'features': 1e-4,
+        'add_on_layers': 1e-3,
+        'occurrence': 1e-3,
+        'prototype_vectors': 1e-3,
+        'final_add_on_layers': 1e-3
     }
     
     warm_optimizer_lrs = {
         'add_on_layers': 1e-4,
-        'prototype_vectors': 1e-4,
-        'occurrence': 1e-4,
-        'prototype_vectors': 1e-4,
-        'final_add_on_layers': 1e-4
+        'prototype_vectors': 1e-3,
+        'occurrence': 1e-3,
+        'prototype_vectors': 1e-3,
+        'final_add_on_layers': 1e-3
     }
     
     last_layer_optimizer_lr = {
@@ -161,8 +173,8 @@ def main():
     }
     
     warm_optimizer_specs = \
-    [{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
-    {'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    [#{'params': model.features.adaptation_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    #{'params': model.features.fpn.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.occurrence_module.parameters(), 'lr': warm_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
@@ -193,10 +205,8 @@ def main():
     epochs = args.epochs
     num_warm_epochs = 10
     push_start = 10
-    push_epochs = [i for i in range(epochs) if i > push_start and i % 5 == 0]
-    
-    prototype_activation_function = 'log'
-    
+    push_epochs = [i for i in range(epochs) if i % push_start == 0]
+        
     coefs = {
     'crs_ent': 1,
     'clst': 0.08,
@@ -208,50 +218,49 @@ def main():
 
     # Initialize lists to store metrics over epochs
     all_train_metrics = []
-    all_test_metrics = []
+    all_val_metrics = []
 
     # Train the model
-    start_time = time.time()  # Record the start time of the entire training
-    # min_test_loss = float('inf')
-    task_weights = [1.0] * 4
+    max_val_bacc = float(0)
+    start_time = time.time() 
     for epoch in range(epochs):
-        # Print header
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" + "-"*100)
-        # Train and test the model batch by batch
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + "-"*100)
+
         epoch_start = time.time()  # Start time of the current epoch
         
         if epoch < num_warm_epochs:
             tnt.warm_only(model=model)
 
-            train_metrics, task_weights = tnt.train_xpnet(data_loader=train_dataloader, 
-                                                          model=model, 
-                                                          optimizer=warm_optimizer,
-                                                          device=device,
-                                                          coefs=coefs,
-                                                          task_weights=task_weights)
+            train_metrics = tnt.train_xpnet(data_loader=train_dataloader, 
+                                            model=model, 
+                                            optimizer=warm_optimizer,
+                                            device=device,
+                                            coefs=coefs)
             
             all_train_metrics.append(train_metrics)  # Append training metrics for the epoch
         
         else:
             tnt.joint(model=model)
             
-            train_metrics, task_weights = tnt.train_xpnet(data_loader=train_dataloader, 
-                                                          model=model, 
-                                                          optimizer=joint_optimizer,
-                                                          device=device,
-                                                          coefs=coefs,
-                                                          task_weights=task_weights)
+            train_metrics = tnt.train_xpnet(data_loader=train_dataloader, 
+                                            model=model, 
+                                            optimizer=joint_optimizer,
+                                            device=device,
+                                            coefs=coefs)
             
             all_train_metrics.append(train_metrics)
         
         # Testing step
-        test_metrics = tnt.test_xpnet(data_loader=test_dataloader,
-                                        model=model,
-                                        device=device,
-                                        coefs=coefs,
-                                        task_weights=task_weights)
+        val_metrics = tnt.test_xpnet(data_loader=val_dataloader,
+                                      model=model,
+                                      device=device,
+                                      coefs=coefs)
         
-        all_test_metrics.append(test_metrics)  # Append testing metrics for the epoch
+        all_val_metrics.append(val_metrics)  # Append testing metrics for the epoch
+        
+        if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
+            max_val_bacc = val_metrics['final_balanced_accuracy']
+            save_model_in_chunks(model.state_dict(), best_model_path)
         
         if epoch >= push_start and epoch in push_epochs:
             print(f"\nPushing prototypes at epoch {epoch}\n")
@@ -265,43 +274,103 @@ def main():
                             replace_prototypes=True
                         )
             
-            test_metrics = tnt.test_xpnet(data_loader=test_dataloader,
+            val_metrics = tnt.test_xpnet(data_loader=val_dataloader,
                                           model=model,
                                           device=device,
-                                          coefs=coefs,
-                                          task_weights=task_weights)
+                                          coefs=coefs)
+            all_val_metrics.append(val_metrics)
             
-            all_test_metrics.append(test_metrics)
-            
-            if prototype_activation_function != 'linear':
-                tnt.last_only(model=model)
-                for i in range(5):
-                    _, task_weights = tnt.train_xpnet(data_loader=train_dataloader, 
-                                                      model=model, 
-                                                      optimizer=last_layer_optimizer,
-                                                      device=device,
-                                                      coefs=coefs,
-                                                      task_weights=task_weights)
-                    
-                    _ = tnt.test_xpnet(data_loader=test_dataloader,
-                                        model=model,
-                                        device=device,
-                                        coefs=coefs,
-                                        task_weights=task_weights)
+            tnt.last_only(model=model)
+            for i in range(10):
+                train_metrics = tnt.train_xpnet(data_loader=train_dataloader, 
+                                                model=model, 
+                                                optimizer=last_layer_optimizer,
+                                                device=device,
+                                                coefs=coefs)
+                all_train_metrics.append(train_metrics)
+                
+                val_metrics = tnt.test_xpnet(data_loader=val_dataloader,
+                                   model=model,
+                                   device=device,
+                                   coefs=coefs)
+                all_val_metrics.append(val_metrics)
+                
+                if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
+                    max_val_bacc = val_metrics['final_balanced_accuracy']
+                    save_model_in_chunks(model.state_dict(), best_model_path)
         
-        # Save the model if the test loss has decreased
-        # if test_metrics['average_loss'] < min_test_loss:
-        #     min_test_loss = test_metrics['average_loss']
-        #     save_model_in_chunks(model.state_dict(), best_model_path)
 
         epoch_end = time.time()  # End time of the current epoch
-        print(f"\nEpoch {epoch + 1} completed in {epoch_end - epoch_start:.2f} seconds")  # Print the time taken for the epoch
+        print(f"\nEpoch {epoch + 1} completed in {epoch_end - epoch_start:.2f} seconds") 
 
-    total_time = time.time() - start_time  # Total time for training
-    print(f"Total training time: {total_time:.2f} seconds\n")  # Print the total training time
+    total_time = time.time() - start_time  
+    print(f"Total training time: {total_time:.2f} seconds\n")  
 
-    save_metrics_to_csv(all_train_metrics, all_test_metrics, metrics_path)  # Save metrics to a CSV file
-    plot_and_save_loss(all_train_metrics, all_test_metrics, plot_path)  # Plot and save the loss
+    save_metrics_to_csv(all_train_metrics, all_val_metrics, metrics_path)  # Save metrics to a CSV file
+    
+    ###############################################################################################################
+    ################################### Evaluate the model on the test set ########################################
+    ###############################################################################################################
+    print("\n\n" + "#"*100 + "\n\n")
+    # Evaluate the model on each slice
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    
+    _ = tnt.test_xpnet(data_loader=test_dataloader, model=model, device=device, coefs=coefs)
+    test_metrics, test_confusion_matrix = tnt.evaluate_model(test_dataloader, model, device)
+    print(f"Test Metrics:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix) 
+    
+    # Load the best model
+    model.load_state_dict(load_model_from_chunks(best_model_path))
+    
+    # Evaluate the model on each slice
+    LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    
+    test_metrics, test_confusion_matrix = tnt.evaluate_model(test_dataloader, model, device)
+    print(f"Test Metrics, Best Model:")
+    print(test_metrics)
+    print("Test Confusion Matrix:")
+    print(test_confusion_matrix)  
+    
+    df_test = pd.DataFrame([test_metrics])
+    df_test.to_csv(test_metrics_path)
+    
+    # Check if labels includes 'central'
+    if 'central' not in labels_file:
+        # Group slices by nodule and evaluate the model on each nodule
+        from src.evaluation.evaluating import LIDCEvaluationDataset
+        LIDC_testset = LIDCEvaluationDataset(labels_file=labels_file, indeterminate=False, chosen_chars=CHOSEN_CHARS)
+        test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=False, num_workers=0) # Predict one nodule at a time
+
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="median")
+        print(f"Test Metrics with Median Aggregation:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+        print(test_confusion_matrix)
+
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=0.6)
+        print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 0.6:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+
+        print(test_confusion_matrix)
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.0)
+        print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.0:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+        print(test_confusion_matrix)
+
+        test_metrics, test_confusion_matrix = evaluate_model_by_nodule(model, test_dataloader, device, mode="gaussian", std_dev=1.4)
+        print(f"Test Metrics with Gaussian Aggregation and Standard Deviation of 1.4:")
+        print(test_metrics)
+        print("Test Confusion Matrix:")
+        print(test_confusion_matrix)
+    
+    
 
 if __name__ == '__main__':
     main()

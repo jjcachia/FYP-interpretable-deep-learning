@@ -134,4 +134,4 @@ class LIDCDataset(Dataset):
         if self.transforms:
             image = self.transforms(image)
             
-        return image, label_chars, bweight_chars, final_pred_label, bweight_fpred, slice_weight
+        return image, label_chars, bweight_chars, final_pred_label, bweight_fpred, slice_weight, path

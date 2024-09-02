@@ -10,29 +10,8 @@ from src.loss.loss import (
     TransformLoss,
 )
 
-from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score, precision_score
+from sklearn.metrics import balanced_accuracy_score, f1_score, recall_score, roc_auc_score, precision_score, confusion_matrix
 
-def _adjust_weights(task_losses, exponent=2, target_sum=5):
-    """
-    Adjusts the weights based on the task losses, using the sum of all task losses for normalization.
-    
-    Args:
-        task_losses (list): List of losses for each task.
-        exponent (int): The exponent used for calculating the inverse weights. Defaults to 2.
-        target_sum (int): The total sum to which the weights should scale. Defaults to 5.
-
-    Returns:
-        list: A list of adjusted weights for each task.
-    """
-    # Calculate the total sum of all task losses
-    total_loss = sum(task_losses)
-    # Normalize each loss by the total sum of losses
-    normalized_losses = [loss / total_loss for loss in task_losses] if total_loss > 0 else [0] * len(task_losses)
-    # Calculate weights using the normalized losses
-    weights = [1.0 / ((1.0 - loss) ** exponent + 1e-6) for loss in normalized_losses]
-    total_weight = sum(weights)
-    scaled_weights = [w / total_weight * target_sum for w in weights]
-    return scaled_weights
 
 def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_mask=True, coefs=None, task_weights=None):
     model.to(device)
@@ -73,15 +52,16 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
     n_batches = 0
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
-        for X, targets, bweights_chars, final_target, bweight in tqdm(data_loader, leave=False):
+        for X, targets, bweights_chars, final_target, bweight, _, _ in tqdm(data_loader, leave=False):
             X = X.to(device)
             bweights_chars = [b.float().to(device) for b in bweights_chars]            
-            targets = [t.squeeze().to(device) for t in targets]
+            # targets = [t.squeeze().to(device) for t in targets]
+            targets = [t.long().to(device) for t in targets]
             final_target = final_target.float().unsqueeze(1).to(device)
             bweight = bweight.float().unsqueeze(1).to(device)
             
             final_output, task_outputs, similarities, occurrence_maps = model(X)
-            
+
             ############################ Compute Losses ############################
             
             batch_loss = 0.0
@@ -227,10 +207,13 @@ def test_xpnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_we
     return test_metrics
 
 
+##############################################################################################################################################################
+##############################################################      Gradient Modification      ###############################################################
+##############################################################################################################################################################
+
 def last_only(model):
     for p in model.features.parameters():
         p.requires_grad = False
-    
     for p in model.add_on_layers_module.parameters():
         p.requires_grad = False
     for p in model.occurrence_module.parameters():
@@ -245,17 +228,16 @@ def last_only(model):
         p.requires_grad = True # was true
 
 def warm_only(model):
-    if model.features.encoder is not None:
-        for p in model.features.encoder.parameters():
-            p.requires_grad = False
-        for p in model.features.adaptation_layers.parameters():
-            p.requires_grad = True
-        for p in model.features.fpn.parameters():
-            p.requires_grad = True
-    else:
-        for p in model.features.parameters():
-            p.requires_grad = False
-    
+    # if model.features.encoder is not None:
+    #     for p in model.features.encoder.parameters():
+    #         p.requires_grad = False
+    #     for p in model.features.adaptation_layers.parameters():
+    #         p.requires_grad = True
+    #     for p in model.features.fpn.parameters():
+    #         p.requires_grad = True
+    # else:
+    for p in model.features.parameters():
+        p.requires_grad = False
     for p in model.add_on_layers_module.parameters():
         p.requires_grad = True
     for p in model.occurrence_module.parameters():
@@ -272,7 +254,6 @@ def warm_only(model):
 def joint(model):
     for p in model.features.parameters():
         p.requires_grad = True
-    
     for p in model.add_on_layers_module.parameters():
         p.requires_grad = True
     for p in model.occurrence_module.parameters():
@@ -286,3 +267,61 @@ def joint(model):
     for p in model.final_classifier.parameters():
         p.requires_grad = False
     
+
+##############################################################################################################################################################
+##################################################################    Evaluation Functions    ################################################################
+##############################################################################################################################################################
+
+def evaluate_model(data_loader, model, device, indeterminate=False):
+    model.eval()  # Set the model to evaluation mode
+    
+    num_characteristics = model.num_characteristics
+    
+    final_pred_targets = [[] for _ in range(num_characteristics)]
+    final_pred_outputs = [[] for _ in range(num_characteristics)]
+    
+    final_targets = []
+    final_outputs = []
+    
+    with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
+        for X, targets, _, final_target, _, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
+            X = X.to(device)
+            targets = [t.long().to(device) for t in targets]
+            
+            if indeterminate:
+                final_target = final_target.long().to(device)
+            else:
+                final_target = final_target.float().unsqueeze(1).to(device)
+            
+            final_output, task_outputs, _, _ = model(X)
+            
+            for i, (task_output, target) in enumerate(zip(task_outputs, targets)):
+                preds = task_output.argmax(dim=1)
+                final_pred_targets[i].extend(target.cpu().numpy())
+                final_pred_outputs[i].extend(preds.detach().cpu().numpy())  
+            
+            if indeterminate:
+                final_preds = final_output.argmax(dim=1)
+            else:
+                final_preds = final_output.round()
+
+            final_targets.extend(final_target.cpu().numpy())
+            final_outputs.extend(final_preds.detach().cpu().numpy())
+    
+    task_balanced_accuracies = [balanced_accuracy_score(targets, outputs) for targets, outputs in zip(final_pred_targets, final_pred_outputs)]
+    final_balanced_accuracy = balanced_accuracy_score(final_targets, final_outputs)
+    final_f1 = f1_score(final_targets, final_outputs)
+    final_precision = precision_score(final_targets, final_outputs)
+    final_recall = recall_score(final_targets, final_outputs)
+    final_auc = roc_auc_score(final_targets, final_outputs)
+    conf_matrix = confusion_matrix(final_targets, final_outputs)
+    
+    metrics = {'task_balanced_accuracies': task_balanced_accuracies,
+               'final_balanced_accuracy': final_balanced_accuracy,
+               'final_f1': final_f1,
+               'final_precision': final_precision,
+               'final_recall': final_recall,
+               'final_auc': final_auc
+            }
+    
+    return metrics, conf_matrix

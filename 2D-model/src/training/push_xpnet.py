@@ -84,7 +84,7 @@ def push_prototypes(
 
     # data_iter = iter(dataloader)
     # iterator = tqdm(range(len(dataloader)), dynamic_ncols=True)
-    for X, y, _, _, _ in tqdm(dataloader, leave=False):
+    for X, y, _, _, _, path in tqdm(dataloader, leave=False):
         # data_sample = next(data_iter)
         # x = data_sample["cine"]  
         
@@ -102,9 +102,8 @@ def push_prototypes(
             ) = model.push_forward(x)
             # pred_torch = logits.softmax(dim=1)
 
-        # gt = y.detach().cpu().numpy()  # shape (B)
         image = x.detach().cpu().numpy()  # shape (B, 3, Ho, Wo)
-        # filename = data_sample["filename"]  # shape (B) 
+        filename = path  # shape (B) 
         
         for characteristic_idx in range(num_characteristics):
             proto_class_identity = np.argmax(model.prototype_class_identity[characteristic_idx].cpu().numpy(), axis=1)  # shape (P)
@@ -136,18 +135,18 @@ def push_prototypes(
                     pred_[characteristic_idx][prototype_idx] = pred[a]
                     image_[characteristic_idx][prototype_idx] = image[a]
                     gt_[characteristic_idx][prototype_idx] = gt[a]
-                    # filename_[characteristic_idx][prototype_idx] = filename[a]
+                    filename_[characteristic_idx][prototype_idx] = filename[a]
 
     prototypes_similarity_to_src_ROIs = 1 - np.array(proto_dist_)  # invert distance to similarity  shape (P)
     prototypes_occurrence_maps = np.array(occurrence_map_)  # shape (P, 1, H, W)
     prototypes_src_imgs = np.array(image_)  # shape (P, 3, Ho, Wo)
     prototypes_gts = np.array(gt_)  # shape (P)
     prototypes_preds = np.array(pred_)  # shape (P, K)
-    # prototypes_filenames = np.array(filename_)  # shape (P)
+    prototypes_filenames = np.array(filename_)  # shape (P)
 
     # save the prototype information in a pickle file
     prototype_data_dict = {
-        # "prototypes_filenames": prototypes_filenames,
+        "prototypes_filenames": prototypes_filenames,
         "prototypes_src_imgs": prototypes_src_imgs,
         "prototypes_gts": prototypes_gts,
         "prototypes_preds": prototypes_preds,
@@ -164,6 +163,3 @@ def push_prototypes(
             prototype_update = np.reshape(protoL_input_char, prototype_vectors.shape)
             with torch.no_grad():
                 prototype_vectors.data.copy_(torch.tensor(prototype_update, dtype=torch.float32).to(device))
-            
-        # prototype_update = np.reshape(protoL_input_, tuple(prototype_shape))
-        # model.prototype_vectors.data.copy_(torch.tensor(prototype_update, dtype=torch.float32).cuda())
