@@ -6,7 +6,7 @@ from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_mode
 
 from src.loaders.dataloaderv2 import LIDCDataset
 import src.training.train_xpnet as tnt
-from src.models.XProtoNet import construct_XPNet
+from src.models.XProtoNetv2 import construct_XPNet
 from src.training.push_xpnet import push_prototypes
 
 
