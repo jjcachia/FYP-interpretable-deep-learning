@@ -222,8 +222,8 @@ def last_only(model):
     for p in model.task_specific_classifier.parameters():
         p.requires_grad = True
         
-    for p in model.final_add_on_layers.parameters():
-        p.requires_grad = False
+    # for p in model.final_add_on_layers.parameters():
+    #     p.requires_grad = False
     for p in model.final_classifier.parameters():
         p.requires_grad = True # was true
 
@@ -246,8 +246,8 @@ def warm_only(model):
     for p in model.task_specific_classifier.parameters():
         p.requires_grad = False
         
-    for p in model.final_add_on_layers.parameters():
-        p.requires_grad = True
+    # for p in model.final_add_on_layers.parameters():
+    #     p.requires_grad = True
     for p in model.final_classifier.parameters():
         p.requires_grad = False
         
@@ -255,15 +255,15 @@ def joint(model):
     for p in model.features.parameters():
         p.requires_grad = True
     for p in model.add_on_layers_module.parameters():
-        p.requires_grad = False
+        p.requires_grad = True
     for p in model.occurrence_module.parameters():
             p.requires_grad = True
     model.prototype_vectors.requires_grad = True
     for p in model.task_specific_classifier.parameters():
         p.requires_grad = False
     
-    for p in model.final_add_on_layers.parameters():
-        p.requires_grad = True
+    # for p in model.final_add_on_layers.parameters():
+    #     p.requires_grad = True
     for p in model.final_classifier.parameters():
         p.requires_grad = False
     

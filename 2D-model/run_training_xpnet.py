@@ -178,7 +178,7 @@ def main():
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.occurrence_module.parameters(), 'lr': warm_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
-    {'params': model.final_add_on_layers.parameters(), 'lr': warm_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
+    # {'params': model.final_add_on_layers.parameters(), 'lr': warm_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
     
@@ -187,7 +187,7 @@ def main():
     {'params': model.add_on_layers_module.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.occurrence_module.parameters(), 'lr': joint_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
-    {'params': model.final_add_on_layers.parameters(), 'lr': joint_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
+    # {'params': model.final_add_on_layers.parameters(), 'lr': joint_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
