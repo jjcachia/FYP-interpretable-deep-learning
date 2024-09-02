@@ -69,6 +69,7 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
             
             if root_dir_for_saving_prototypes != None:
                 dir_for_saving_characteristic_prototypes = os.path.join(root_dir_for_saving_prototypes, f"characteristic_{characteristic_index}")
+                os.makedirs(dir_for_saving_characteristic_prototypes, delete_if_exist=True)
                 
             update_prototypes_on_batch(search_batch_input, 
                                        start_index_of_search_batch,
