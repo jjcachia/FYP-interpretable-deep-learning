@@ -33,6 +33,7 @@ class BaselineModel(nn.Module):
         features_dims = np.array(self.backbone.get_output_dims()) # [C, (D), H, W]
         
         self.feature_size = features_dims.size
+        print(self.feature_size)
         if self.feature_size == 3:
             self.add_on_layers = nn.Sequential(
                 nn.Conv2d(in_channels=features_dims[0], out_channels=512, kernel_size=1),
@@ -50,7 +51,7 @@ class BaselineModel(nn.Module):
         
         out_dims = np.array([512] + list(features_dims[1:])) # [512, (D), H, W]
         num_features = np.prod(out_dims) # 512 * (D) * H * W
-                
+        print(num_features)
         self.task_specific_layers = nn.ModuleList([
             nn.Sequential(
                 nn.Flatten(),
