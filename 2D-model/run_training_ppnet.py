@@ -269,13 +269,13 @@ def main():
                                                    optimizer=last_layer_optimizer,
                                                    device=device,
                                                    coefs=coefs)
-                all.train_metrics.append(train_metrics)
+                all_train_metrics.append(train_metrics)
                 
                 val_metrics = tnt.test_ppnet(data_loader=val_dataloader,
                                               model=model,
                                               device=device,
                                               coefs=coefs)
-                all.val_metrics.append(val_metrics)
+                all_val_metrics.append(val_metrics)
                     
         
         if val_metrics['final_balanced_accuracy'] > max_val_bacc and val_metrics['final_balanced_accuracy'] > 0.60:
