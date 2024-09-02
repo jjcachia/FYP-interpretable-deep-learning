@@ -135,7 +135,7 @@ def main():
     model = construct_Model(
         backbone_name=args.backbone, 
         weights=args.weights, 
-        num_tasks=len(CHOSEN_CHARS), 
+        num_tasks=sum(CHOSEN_CHARS), 
         num_classes=args.classes,
         indeterminate=args.indeterminate
     )
