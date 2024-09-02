@@ -2,21 +2,21 @@ import os, time, gc, argparse, shutil
 from PIL import Image
 import torch, torch.utils.data, torchvision.transforms as transforms, torch.nn as nn
 
-from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, select_device_with_most_memory
+from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_model_in_chunks, setup_directories, load_model_from_chunks, set_seed
+
 from src.loaders.dataloaderv2 import LIDCDataset
 import src.training.train_xpnet as tnt
 from src.models.XProtoNet import construct_XPNet
 from src.training.push_xpnet import push_prototypes
 
 
-DEFAULT_IMG_CHANNELS = 3
-DEFAULT_IMG_SIZE = 100
+CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, subtlety, calcification, sphericity, margin, lobulation, spiculation, texture]
+DEFAULT_NUM_CHARS = sum(CHOSEN_CHARS)
+DEFAULT_NUM_CLASSES = 2
+DEFAULT_NUM_PROTOTYPES_PER_CLASS = 10
+DEFAULT_PROTOTYPE_SHAPE = (DEFAULT_NUM_PROTOTYPES_PER_CLASS*DEFAULT_NUM_CHARS*DEFAULT_NUM_CLASSES, 128, 1, 1)
 
-DEFAULT_CHARS = [False, False, False, True, True, False, False, True, True]
-DEFAULT_NUM_CHARS = sum(DEFAULT_CHARS)
-DEFAULT_PROTOTYPE_SHAPE = (10*DEFAULT_NUM_CHARS*2, 256, 1, 1)
-
-DEFAULT_BATCH_SIZE = 10
+DEFAULT_BATCH_SIZE = 25
 DEFAULT_EPOCHS = 100
 DEFAULT_LEARNING_RATE = 0.0001
 
@@ -24,17 +24,17 @@ MODEL_DICT = {
     'xpnet': construct_XPNet
 }
 
-# TODO: Add number of prototypes as a parameter, prototype size, and more 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep learning model on the specified dataset.")
-    parser.add_argument('--backbone', type=str, default='denseNet_121', help='Feature Extractor Backbone to use')
-    parser.add_argument('--model', type=str, default='xpnet', help='Model to train')
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
+    
+    parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
+    parser.add_argument('--model', type=str, default='xpnet', help='Model to train')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
+    parser.add_argument('--classes', type=int, default=2, help='Number of classes to predict')
+    parser.add_argument('--indeterminate', type=bool, default=False, help='Whether to predict indeterminate nodules')
     
-    parser.add_argument('--img_channels', type=int, default=DEFAULT_IMG_CHANNELS, help='Number of channels in the input image')
-    parser.add_argument('--img_size', type=int, default=DEFAULT_IMG_SIZE, help='Size of the input image')
-    
+    parser.add_argument('--device', type=str, default='0', help='GPU device to use')
     parser.add_argument('--batch_size', type=int, default=DEFAULT_BATCH_SIZE, help='Batch size for training')
     parser.add_argument('--epochs', type=int, default=DEFAULT_EPOCHS, help='Number of epochs to train')
     parser.add_argument('--learning_rate', type=float, default=DEFAULT_LEARNING_RATE, help='Learning rate for optimizer')
@@ -57,17 +57,30 @@ def main():
     paths = setup_directories(base_path, experiment_model, experiment_backbone, experiment_run)
     best_model_path = os.path.join(paths['weights'], 'best_model.pth')
     metrics_path = os.path.join(paths['metrics'], 'metrics.csv')
-    plot_path = os.path.join(paths['plots'], 'loss_plot.png')
+    test_metrics_path = os.path.join(paths['metrics'], 'test_metrics.csv')
+
+    # Prototype push path
+    push_dir = paths['prototypes']
+    
 
     # Save the script to the experiment directory
     shutil.copy(__file__, os.path.join(paths['scripts'], 'main.py'))
     
+    # Set the seed for reproducibility
+    set_seed(27)
+    
     # Check if CUDA is available
     print("#"*100 + "\n\n")
+    if torch.cuda.is_available():
+        print("CUDA is available. GPU devices:")
+        # Loop through all available GPUs
+        for i in range(torch.cuda.device_count()):
+            print(f"Device {i}: {torch.cuda.get_device_name(i)}")
+    else:
+        print("CUDA is not available. Only CPU is available.")
     
-    # device = select_device_with_most_memory()
-    device = torch.device('cuda:4') 
-    print(f"\nUsing device: {device}")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
 
     ###############################################################################################################
     #################################### Initialize the data loaders ##############################################
