@@ -180,7 +180,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
             }
     
     if is_train:
-        task_weights = _adjust_weights(task_losses, exponent=5, target_sum=4)
+        task_weights = _adjust_weights(task_losses, exponent=5, target_sum=4) if task_weights is None else task_weights
         return metrics, task_weights
     else:
         return metrics
