@@ -12,7 +12,8 @@ CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, 
 DEFAULT_NUM_CHARS = sum(CHOSEN_CHARS)
 DEFAULT_NUM_CLASSES = 2
 DEFAULT_NUM_PROTOTYPES_PER_CLASS = 10
-DEFAULT_PROTOTYPE_SHAPE = (DEFAULT_NUM_PROTOTYPES_PER_CLASS*CHOSEN_CHARS*DEFAULT_NUM_CLASSES, 128, 2, 2)
+# DEFAULT_PROTOTYPE_SHAPE = (DEFAULT_NUM_PROTOTYPES_PER_CLASS*CHOSEN_CHARS*DEFAULT_NUM_CLASSES, 128, 2, 2)
+DEFAULT_PROTOTYPE_SHAPE = (10*2*DEFAULT_NUM_CHARS, 128, 1, 1)
 
 DEFAULT_BATCH_SIZE = 100
 DEFAULT_EPOCHS = 100
@@ -139,7 +140,7 @@ def main():
         weights=args.weights,
         img_size=100,
         prototype_shape=DEFAULT_PROTOTYPE_SHAPE,
-        num_characteristics=5,
+        num_characteristics=DEFAULT_NUM_CHARS,
         num_classes=DEFAULT_NUM_CLASSES,
         prototype_activation_function='log', 
         add_on_layers_type='regular'
