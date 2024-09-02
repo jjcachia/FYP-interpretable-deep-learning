@@ -212,7 +212,7 @@ def test_xpnet(model, data_loader, device, use_l1_mask=True, coefs=None, task_we
 ##############################################################################################################################################################
 
 def last_only(model):
-    for p in model.features.parameters():
+    for p in model.cnn_backbone.parameters():
         p.requires_grad = False
     for p in model.add_on_layers.parameters():
         p.requires_grad = False
@@ -236,7 +236,7 @@ def warm_only(model):
     #     for p in model.features.fpn.parameters():
     #         p.requires_grad = True
     # else:
-    for p in model.features.parameters():
+    for p in model.cnn_backbone.parameters():
         p.requires_grad = False
     for p in model.add_on_layers.parameters():
         p.requires_grad = True
@@ -252,7 +252,7 @@ def warm_only(model):
         p.requires_grad = False
         
 def joint(model):
-    for p in model.features.parameters():
+    for p in model.cnn_backbone.parameters():
         p.requires_grad = True
     for p in model.add_on_layers.parameters():
         p.requires_grad = True

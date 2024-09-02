@@ -183,7 +183,7 @@ def main():
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
     
     joint_optimizer_specs = \
-    [{'params': model.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3},
+    [{'params': model.cnn_backbone.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3},
     {'params': model.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.occurrence_module.parameters(), 'lr': joint_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
