@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     
     parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
-    parser.add_argument('--model', type=str, default='baseline', help='Model to train')
+    parser.add_argument('--model', type=str, default='base', help='Model to train')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     parser.add_argument('--classes', type=int, default=2, help='Number of classes to predict')
     parser.add_argument('--indeterminate', type=bool, default=False, help='Whether to predict indeterminate nodules')

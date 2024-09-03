@@ -24,7 +24,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_sli
     
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
-        for X, _, _, y, bweight_pred, slice_weight in tqdm(data_loader, leave=False):
+        for X, _, _, y, bweight_pred, slice_weight,_ in tqdm(data_loader, leave=False):
             X, y = X.to(device), y.to(device)
             bweight_pred = bweight_pred.float().unsqueeze(1).to(device)
             y = y.float().unsqueeze(1)
@@ -98,7 +98,7 @@ def evaluate_model(data_loader, model, device):
     final_pred_targets = []
     final_pred_outputs = []
     with torch.no_grad():
-        for X, _, _, y, _, _ in tqdm(data_loader, leave=False):
+        for X, _, _, y, _, _,_ in tqdm(data_loader, leave=False):
             images = X.to(device)
             y = y.float().unsqueeze(1).to(device)
             outputs = model(images)
