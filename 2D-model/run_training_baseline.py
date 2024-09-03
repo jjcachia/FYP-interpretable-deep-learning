@@ -206,7 +206,7 @@ def main():
     
     # Evaluate the model on each slice
     LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, split='test')
-    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=1, shuffle=True, num_workers=0)
     
     test_metrics, test_confusion_matrix = evaluate_model(test_dataloader, model, device)
     print(f"Test Metrics:")
