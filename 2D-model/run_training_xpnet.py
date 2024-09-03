@@ -8,9 +8,10 @@ from src.loaders.dataloaderv2 import LIDCDataset
 import src.training.train_xpnet as tnt
 from src.models.XProtoNetv2 import construct_XPNet
 from src.training.push_xpnet import push_prototypes
+import pandas as pd
 
-
-CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, subtlety, calcification, sphericity, margin, lobulation, spiculation, texture]
+# CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, subtlety, calcification, sphericity, margin, lobulation, spiculation, texture]
+CHOSEN_CHARS = [True, True, True, False, True, True, True, True]
 DEFAULT_NUM_CHARS = sum(CHOSEN_CHARS)
 DEFAULT_NUM_CLASSES = 2
 DEFAULT_NUM_PROTOTYPES_PER_CLASS = 10
