@@ -87,7 +87,7 @@ def main():
     print("\n\n" + "#"*100 + "\n\n")
     
     # Load the labels file
-    labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
     
     # Check if the labels file includes 3D data
     if '3D' in labels_file:
@@ -163,7 +163,6 @@ def main():
     # Train the model
     start_time = time.time()  # Record the start time of the entire training
     max_val_bacc = float(0)
-    task_weights = None
     for epoch in range(epochs):
         # Print header
         print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t\n" + "-"*100)# + f"Task Weights: {[f'{weight:.2f}' for weight in task_weights]}\n" +
@@ -174,15 +173,13 @@ def main():
         train_metrics = train_step(data_loader=train_dataloader, 
                                     model=model, 
                                     optimizer=optimizer,
-                                    device=device,
-                                    task_weights=task_weights)
+                                    device=device)
         all_train_metrics.append(train_metrics)  
         
         # Testing step
         test_metrics = test_step(data_loader=val_dataloader,
                                  model=model,
-                                 device=device,
-                                 task_weights=task_weights)
+                                 device=device)
         all_test_metrics.append(test_metrics) 
         
         # Save the model if the val f1 has decreased
