@@ -28,7 +28,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, task_we
     
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
-        for X, targets, bweights_chars, _, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
+        for X, targets, bweights_chars, _, _, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
             bweights_chars = [b.float().to(device) for b in bweights_chars]
             targets = [t.long().to(device) for t in targets]
@@ -134,7 +134,7 @@ def evaluate_model(data_loader, model, device):
     
     confusion_matrix = np.zeros((model.num_tasks, model.num_tasks), dtype=int)
     with torch.no_grad():
-        for X, targets, _, _, _, _ in tqdm(data_loader, leave=False):
+        for X, targets, _, _, _, _, _ in tqdm(data_loader, leave=False):
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
             

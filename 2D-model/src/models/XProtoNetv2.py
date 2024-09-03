@@ -61,12 +61,12 @@ class XProtoNet(PPNet):
             nn.Linear(self.prototypes_per_characteristic, self.num_classes, bias=False) for _ in range(self.num_characteristics)   # Apply softmax to get confidence scores for each class of each characteristic
         ])
         
-        self.final_classifier = nn.Sequential(
-            nn.Linear(self.prototypes_per_characteristic*self.num_characteristics, 256),
-            nn.BatchNorm1d(256),
+        self.final_classifier = nn.Sequential( # was 256
+            nn.Linear(self.prototypes_per_characteristic*self.num_characteristics, self.num_characteristics*self.num_classes),
+            nn.BatchNorm1d(self.num_characteristics*self.num_classes),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(256, 1)
+            nn.Linear(self.num_characteristics*self.num_classes, 1)
         )
         
         self._set_last_layer_incorrect_connection(incorrect_strength=-0.5)
