@@ -99,12 +99,12 @@ class LIDCDataset(Dataset):
         # Load the image
         path = self.labels['image_dir'].iloc[idx]
         array = np.load(path)
-        # array = np.expand_dims(array, axis=0) # Convert to 1-channel image
-        # array = np.repeat(array, 3, axis=0) # Convert to 3-channel image
-        # image = torch.from_numpy(array)        
-        image = Image.fromarray(array)
-        image = transforms.Grayscale(num_output_channels=3)(image)
-        image = transforms.ToTensor()(image)
+        array = np.expand_dims(array, axis=0) # Convert to 1-channel image
+        array = np.repeat(array, 3, axis=0) # Convert to 3-channel image
+        image = torch.from_numpy(array)        
+        # image = Image.fromarray(array)
+        # image = transforms.Grayscale(num_output_channels=3)(image)
+        # image = transforms.ToTensor()(image)
         
         # Get the weight for the slice
         num_slices = self.labels['total_slices'].iloc[idx]
