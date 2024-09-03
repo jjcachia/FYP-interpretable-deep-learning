@@ -37,7 +37,8 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_sli
                 bweight_pred = bweight_pred * slice_weight
                                         
             # Compute loss
-            loss = torch.nn.functional.binary_cross_entropy(outputs, y, weight=bweight_pred)
+            # loss = torch.nn.functional.binary_cross_entropy(outputs, y, weight=bweight_pred)
+            loss = torch.nn.functional.binary_cross_entropy(outputs, y)
             total_loss += loss.item()
             
             # Collect data for statistics

@@ -24,7 +24,8 @@ BACKBONE_DICT = {
 class BaseModel(nn.Module):
     def __init__(self, backbone, weights, common_channel_size, hidden_layers, indeterminate=False):
         super(BaseModel, self).__init__()        
-        self.backbone = backbone(weights=weights)
+        # self.backbone = backbone(weights=weights)
+        self.backbone = backbone(weights=None)
         self.indeterminate = indeterminate
         
         features_dims = np.array(self.backbone.get_output_dims()) # [C, (D), H, W]

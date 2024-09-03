@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--experiment_run', type=str, required=True, help='Identifier for the experiment run')
     
     parser.add_argument('--backbone', type=str, default='denseNet121', help='Feature Extractor Backbone to use')
-    parser.add_argument('--model', type=str, default='baseline', help='Model to train')
+    parser.add_argument('--model', type=str, default='base', help='Model to train')
     parser.add_argument('--weights', type=str, default='DEFAULT', help='Weights to use for the backbone model')
     
     parser.add_argument('--img_channels', type=int, default=IMG_CHANNELS, help='Number of channels in the input image')
@@ -97,8 +97,8 @@ def main():
     model.load_state_dict(load_model_from_chunks(best_model_path))
     
     # labels_file = os.path.join(script_dir, 'dataset', '3D', 'Meta', 'volume_labels.csv')
-    # labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'processed_slice_labels.csv')
-    labels_file = os.path.join(script_dir, 'dataset', '2_5D', 'Meta', 'adjacent_slices_labels.csv')
+    labels_file = os.path.join(script_dir, 'dataset', '2D', 'Meta', 'central_slice_labels.csv')
+    # labels_file = os.path.join(script_dir, 'dataset', '2_5D', 'Meta', 'adjacent_slices_labels.csv')
     
     LIDC_testset = LIDCDataset(labels_file=labels_file, chosen_chars=CHOSEN_CHARS, indeterminate=False, transform=transforms.Compose([transforms.Grayscale(num_output_channels=IMG_CHANNELS), transforms.ToTensor()]), split='test')
     test_dataloader = torch.utils.data.DataLoader(LIDC_testset, batch_size=50, shuffle=False, num_workers=0)
