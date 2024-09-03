@@ -67,9 +67,9 @@ class BaseModel(nn.Module):
         
         # Final Malignancy Prediction
         if self.indeterminate:
-            final_output = self.final_classifier(concatenated_outputs)
+            final_output = self.final_classifier(x)
         else:
-            final_output = torch.sigmoid(self.final_classifier(concatenated_outputs))
+            final_output = torch.sigmoid(self.final_classifier(x))
         
         return final_output
 
