@@ -6,12 +6,12 @@ from src.utils.helpers import save_metrics_to_csv, plot_and_save_loss, save_mode
 
 from src.loaders.dataloaderv2 import LIDCDataset
 import src.training.train_xpnet as tnt
-from src.models.XProtoNetv2 import construct_XPNet
+from src.models.XProtoNet import construct_XPNet
 from src.training.push_xpnet import push_prototypes
 import pandas as pd
 
-# CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, subtlety, calcification, sphericity, margin, lobulation, spiculation, texture]
-CHOSEN_CHARS = [True, True, True, False, True, True, True, True]
+CHOSEN_CHARS = [True, True, False, True, True, False, False, True] # [diameter, subtlety, calcification, sphericity, margin, lobulation, spiculation, texture]
+# CHOSEN_CHARS = [True, True, True, False, True, True, True, True]
 DEFAULT_NUM_CHARS = sum(CHOSEN_CHARS)
 DEFAULT_NUM_CLASSES = 2
 DEFAULT_NUM_PROTOTYPES_PER_CLASS = 10
@@ -165,7 +165,7 @@ def main():
         'prototype_vectors': 1e-3,
         'occurrence': 1e-3,
         'prototype_vectors': 1e-3,
-        'final_add_on_layers': 1e-3
+        'final_add_on_layers': 1e-4
     }
     
     last_layer_optimizer_lr = {
@@ -179,7 +179,7 @@ def main():
     {'params': model.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.occurrence_module.parameters(), 'lr': warm_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
-    # {'params': model.final_add_on_layers.parameters(), 'lr': warm_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
+    {'params': model.final_add_on_layers.parameters(), 'lr': warm_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
     
@@ -188,7 +188,7 @@ def main():
     {'params': model.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
     {'params': model.occurrence_module.parameters(), 'lr': joint_optimizer_lrs['occurrence'], 'weight_decay': 1e-3},
     {'params': model.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
-    # {'params': model.final_add_on_layers.parameters(), 'lr': joint_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
+    {'params': model.final_add_on_layers.parameters(), 'lr': joint_optimizer_lrs['final_add_on_layers'], 'weight_decay': 1e-3}
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 
@@ -225,7 +225,7 @@ def main():
     max_val_bacc = float(0)
     start_time = time.time() 
     for epoch in range(epochs):
-        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t" + "-"*100)
+        print("\n" + "-"*100 + f"\nEpoch: {epoch + 1}/{epochs},\t\n" + "-"*100)
 
         epoch_start = time.time()  # Start time of the current epoch
         

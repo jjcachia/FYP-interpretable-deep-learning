@@ -80,7 +80,7 @@ def push_prototypes(
     # saves the prediction logits of cases seen. shape (P, K)
     pred_ = [[None for _ in range(P)] for _ in range(num_characteristics)]
     # saves the filenames of cases closest to each prototype. shape (P)
-    # filename_ = [None for _ in range(P)] * num_characteristics # TODO: add filename in getitem of dataloader
+    filename_ = [[None for _ in range(P)] for _ in range(num_characteristics)] # TODO: add filename in getitem of dataloader
 
     # data_iter = iter(dataloader)
     # iterator = tqdm(range(len(dataloader)), dynamic_ncols=True)
@@ -103,7 +103,7 @@ def push_prototypes(
             # pred_torch = logits.softmax(dim=1)
 
         image = x.detach().cpu().numpy()  # shape (B, 3, Ho, Wo)
-        # filename = path  # shape (B) 
+        filename = path  # shape (B) 
         
         for characteristic_idx in range(num_characteristics):
             proto_class_identity = np.argmax(model.prototype_class_identity[characteristic_idx].cpu().numpy(), axis=1)  # shape (P)
@@ -135,18 +135,18 @@ def push_prototypes(
                     pred_[characteristic_idx][prototype_idx] = pred[a]
                     image_[characteristic_idx][prototype_idx] = image[a]
                     gt_[characteristic_idx][prototype_idx] = gt[a]
-                    # filename_[characteristic_idx][prototype_idx] = filename[a]
+                    filename_[characteristic_idx][prototype_idx] = filename[a]
 
     prototypes_similarity_to_src_ROIs = 1 - np.array(proto_dist_)  # invert distance to similarity  shape (P)
     prototypes_occurrence_maps = np.array(occurrence_map_)  # shape (P, 1, H, W)
     prototypes_src_imgs = np.array(image_)  # shape (P, 3, Ho, Wo)
     prototypes_gts = np.array(gt_)  # shape (P)
     prototypes_preds = np.array(pred_)  # shape (P, K)
-    # prototypes_filenames = np.array(filename_)  # shape (P)
+    prototypes_filenames = np.array(filename_)  # shape (P)
 
     # save the prototype information in a pickle file
     prototype_data_dict = {
-        # "prototypes_filenames": prototypes_filenames,
+        "prototypes_filenames": prototypes_filenames,
         "prototypes_src_imgs": prototypes_src_imgs,
         "prototypes_gts": prototypes_gts,
         "prototypes_preds": prototypes_preds,

@@ -57,7 +57,7 @@ def _train_or_test(model, data_loader, optimizer, device, is_train=True, use_l1_
     n_batches = 0
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
-        for X, targets, bweights_chars, final_target, bweight, _ in tqdm(data_loader, leave=False):
+        for X, targets, bweights_chars, final_target, bweight, _, _ in tqdm(data_loader, leave=False):
             X = X.to(device)
             bweights_chars = [b.float().to(device) for b in bweights_chars]            
             # targets = [t.squeeze().to(device) for t in targets]
@@ -272,7 +272,7 @@ def evaluate_model(data_loader, model, device, indeterminate=False):
     final_outputs = []
     
     with torch.no_grad():  # Turn off gradients for validation, saves memory and computations
-        for X, targets, _, final_target, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
+        for X, targets, _, final_target, _, _, _ in tqdm(data_loader, leave=False):  # Assuming final_target is for the final output
             X = X.to(device)
             targets = [t.long().to(device) for t in targets]
             
