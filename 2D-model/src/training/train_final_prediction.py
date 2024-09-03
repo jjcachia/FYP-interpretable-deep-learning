@@ -111,7 +111,7 @@ def evaluate_model(data_loader, model, device):
     precision = precision_score(final_pred_targets, final_pred_outputs)
     recall = recall_score(final_pred_targets, final_pred_outputs)
     auc = roc_auc_score(final_pred_targets, final_pred_outputs)
-    confusion_matrix = confusion_matrix(final_pred_targets, final_pred_outputs)
+    conf_matrix = confusion_matrix(final_pred_targets, final_pred_outputs)
     
     metrics = {'final_balanced_accuracy': balanced_accuracy,
                'final_f1': f1,
@@ -120,7 +120,7 @@ def evaluate_model(data_loader, model, device):
                'final_auc': auc,
             }
     
-    return metrics, confusion_matrix
+    return metrics, conf_matrix
 
 def evaluate_model_by_nodule(model, data_loader, device, mode="median", decision_threshold=0.5, std_dev=1.2):
     model.to(device)
